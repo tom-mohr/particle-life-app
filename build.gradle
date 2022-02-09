@@ -16,10 +16,7 @@ repositories {
 
 dependencies {
 
-    implementation "com.github.tom-mohr:particle-life:v1.0.0"
-
-    // JOML
-    implementation "org.joml:joml:1.10.1"
+    implementation "com.github.tom-mohr:particle-life:v1.0.1"
 
     // jOOR
     implementation 'org.jooq:joor:0.9.14'
