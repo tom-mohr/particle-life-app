@@ -1,5 +1,6 @@
 package com.particle_life.app;
 
+import com.particle_life.*;
 import com.particle_life.app.color.Color;
 import com.particle_life.app.color.Palette;
 import com.particle_life.app.color.PalettesProvider;
@@ -7,11 +8,15 @@ import com.particle_life.app.selection.InfoWrapper;
 import com.particle_life.app.selection.SelectionManager;
 import com.particle_life.app.shaders.ParticleShader;
 import com.particle_life.app.shaders.ShaderProvider;
-import com.particle_life.*;
-import imgui.*;
-import imgui.enums.ImGuiCond;
-import imgui.enums.ImGuiInputTextFlags;
-import imgui.enums.ImGuiWindowFlags;
+import imgui.ImGui;
+import imgui.flag.ImGuiCond;
+import imgui.flag.ImGuiInputTextFlags;
+import imgui.flag.ImGuiSliderFlags;
+import imgui.flag.ImGuiWindowFlags;
+import imgui.type.ImBoolean;
+import imgui.type.ImFloat;
+import imgui.type.ImInt;
+import imgui.type.ImString;
 import org.joml.Matrix4d;
 import org.joml.Vector2d;
 import org.joml.Vector3d;
@@ -24,7 +29,7 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.opengl.GL11.glEnable;
 import static org.lwjgl.opengl.GL13.GL_MULTISAMPLE;
 
 public class Main extends App {
@@ -86,15 +91,15 @@ public class Main extends App {
     private boolean typeCountDisplayPercentage = false;
 
     // GUI: hide / show parts
-    private final ImBool showGui = new ImBool(true);
+    private final ImBoolean showGui = new ImBoolean(true);
     private boolean advancedGui = false;
     private boolean showImportWindow = false;
     private boolean showExportWindow = false;
-    private final ImBool showStyleEditor = new ImBool(false);
-    private final ImBool showAcceleratorEditor = new ImBool(false);
-    private final ImBool showGraphicsSettings = new ImBool(false);
-    private final ImBool showHelpWindow = new ImBool(false);
-    private final ImBool showAboutWindow = new ImBool(false);
+    private final ImBoolean showStyleEditor = new ImBoolean(false);
+    private final ImBoolean showAcceleratorEditor = new ImBoolean(false);
+    private final ImBoolean showGraphicsSettings = new ImBoolean(false);
+    private final ImBoolean showHelpWindow = new ImBoolean(false);
+    private final ImBoolean showAboutWindow = new ImBoolean(false);
 
     // GUI: store data on the current state of the GUI
     private final ExportSettings exportSettings = new ExportSettings();
@@ -418,7 +423,7 @@ public class Main extends App {
                     {
                         float displayValue = (float) settings.rmax;
                         float[] rmaxSliderValue = new float[]{displayValue};
-                        if (ImGui.sliderFloat("rmax", rmaxSliderValue, 0.005f, 1.000f, String.format("%.3f", displayValue), 2)) {
+                        if (ImGui.sliderFloat("rmax", rmaxSliderValue, 0.005f, 1.000f, String.format("%.3f", displayValue), ImGuiSliderFlags.Logarithmic)) {
                             final float newRmax = rmaxSliderValue[0];
                             physics.enqueue(() -> physics.settings.rmax = newRmax);
                         }
@@ -451,7 +456,7 @@ public class Main extends App {
                         }
 
                         float[] dtSliderValue = new float[]{(float) settings.fallbackDt};
-                        if (ImGui.sliderFloat("", dtSliderValue, 0.0f, 0.1f, String.format("%4.1f ms", settings.fallbackDt * 1000.0), 2)) {
+                        if (ImGui.sliderFloat("##", dtSliderValue, 0.0f, 0.1f, String.format("%4.1f ms", settings.fallbackDt * 1000.0), ImGuiSliderFlags.Logarithmic)) {
                             physics.enqueue(() -> physics.settings.fallbackDt = dtSliderValue[0]);
                         }
                         ImGui.sameLine();
@@ -614,7 +619,7 @@ public class Main extends App {
 
                 {
                     float[] inputValue = new float[]{(float) (zoomStepFactor - 1) * 100};
-                    if (ImGui.sliderFloat("Zoom Step", inputValue, 0.0f, 100.0f, "%.1f%%", 2)) {
+                    if (ImGui.sliderFloat("Zoom Step", inputValue, 0.0f, 100.0f, "%.1f%%", ImGuiSliderFlags.Logarithmic)) {
                         zoomStepFactor = 1 + inputValue[0] * 0.01;
                     }
                 }

@@ -5,10 +5,10 @@ import imgui.ImDrawData;
 import imgui.ImFontAtlas;
 import imgui.ImGui;
 import imgui.ImGuiIO;
-import imgui.ImInt;
+import imgui.type.ImInt;
 import imgui.ImVec2;
 import imgui.ImVec4;
-import imgui.enums.ImGuiBackendFlags;
+import imgui.flag.ImGuiBackendFlags;
 
 import java.nio.ByteBuffer;
 import java.util.regex.Matcher;

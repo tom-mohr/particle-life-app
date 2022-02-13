@@ -7,8 +7,8 @@ group 'com.particle.life.app'
 version '1.0.0'
 
 ext {
-    lwjglVersion = '3.2.3'
-    imguiVersion = '1.76-0.9'
+    lwjglVersion = '3.3.0'
+    imguiVersion = '1.86.2'
 }
 
 jar {
@@ -20,7 +20,6 @@ jar {
 
 repositories {
     mavenCentral()
-    jcenter()
     maven { url "https://jitpack.io" }
 }
 
@@ -32,9 +31,9 @@ dependencies {
     implementation 'org.jooq:joor:0.9.14'
 
     // imGui
-    implementation "io.imgui.java:binding:$imguiVersion"
-    implementation "io.imgui.java:lwjgl3:$imguiVersion"
-    runtimeOnly "io.imgui.java:natives-windows:$imguiVersion"
+    implementation "io.github.spair:imgui-java-binding:$imguiVersion"
+    implementation "io.github.spair:imgui-java-lwjgl3:$imguiVersion"
+    implementation "io.github.spair:imgui-java-natives-windows:$imguiVersion"
 
     // LWJGL
 
