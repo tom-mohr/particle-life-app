@@ -486,8 +486,8 @@ public class Main extends App {
                         particleSize = particleSizeSliderValue[0];
                     }
 
-                    if (ImGui.checkbox("clear screen (press [c] to enable))", traces)) {
-                        traces = false;
+                    if (ImGui.checkbox("clear screen [c]", traces)) {
+                        traces ^= true;
                     }
                 }
 
