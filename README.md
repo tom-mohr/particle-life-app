@@ -1,3 +1,8 @@
+# 🦠 Particle Life App
+
+A GUI for [github.com/tom-mohr/particle-life](https://github.com/tom-mohr/particle-life).
+
+
 # Shortcuts
 
 | Keys       | Action                       |
