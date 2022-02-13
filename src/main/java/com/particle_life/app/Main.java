@@ -388,7 +388,7 @@ public class Main extends App {
 
                     // ACCELERATORS
                     if (advancedGui) {
-                        ImGui.text("Accelerator");
+                        ImGui.text("Accelerator [v]");
                         if (renderCombo("##accelerator", accelerators)) {
                             final Accelerator nextAccelerator = accelerators.getActive().object.accelerator;
                             physics.enqueue(() -> physics.accelerator = nextAccelerator);
@@ -415,7 +415,7 @@ public class Main extends App {
                         }
                     }
 
-                    if (ImGui.checkbox("wrap", settings.wrap)) {
+                    if (ImGui.checkbox("wrap [w]", settings.wrap)) {
                         final boolean newWrap = !settings.wrap;
                         physics.enqueue(() -> physics.settings.wrap = newWrap);
                     }
@@ -456,7 +456,7 @@ public class Main extends App {
                         }
 
                         float[] dtSliderValue = new float[]{(float) settings.fallbackDt};
-                        if (ImGui.sliderFloat("##", dtSliderValue, 0.0f, 0.1f, String.format("%4.1f ms", settings.fallbackDt * 1000.0), ImGuiSliderFlags.Logarithmic)) {
+                        if (ImGui.sliderFloat("##dt", dtSliderValue, 0.0f, 0.1f, String.format("%4.1f ms", settings.fallbackDt * 1000.0), ImGuiSliderFlags.Logarithmic)) {
                             physics.enqueue(() -> physics.settings.fallbackDt = dtSliderValue[0]);
                         }
                         ImGui.sameLine();
@@ -471,7 +471,7 @@ public class Main extends App {
                 ImGui.text("Graphics");
                 {
                     // SHADERS
-                    renderCombo("shader", shaders);
+                    renderCombo("shader [s]", shaders);
                     String shaderDescription = shaders.getActive().description;
                     if (!shaderDescription.isBlank()) {
                         ImGui.sameLine();
@@ -479,7 +479,7 @@ public class Main extends App {
                     }
 
                     // PALETTES
-                    renderCombo("palette", palettes);
+                    renderCombo("palette [l]", palettes);
 
                     float[] particleSizeSliderValue = new float[]{particleSize};
                     if (ImGui.sliderFloat("particle size", particleSizeSliderValue, 0.1f, 10f)) {
@@ -875,7 +875,7 @@ public class Main extends App {
                 ImGui.endMenu();
             }
 
-            if (ImGui.menuItem("Hide GUI", "H")) {
+            if (ImGui.menuItem("Hide GUI", "h")) {
                 showGui.set(false);
             }
 
@@ -883,7 +883,7 @@ public class Main extends App {
                 showGraphicsSettings.set(true);
             }
 
-            if (ImGui.menuItem("Advanced GUI", "", advancedGui)) {
+            if (ImGui.menuItem("Advanced GUI", "a", advancedGui)) {
                 advancedGui = !advancedGui;
             }
 
