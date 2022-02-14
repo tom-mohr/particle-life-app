@@ -1,6 +1,7 @@
 plugins {
-    id 'com.github.johnrengelman.shadow' version '7.1.2'  // "shadowJar" task and "shadow" configuration
     id "java"
+    id 'com.github.johnrengelman.shadow' version '7.1.2'  // "shadowJar" task and "shadow" configuration
+    id "application"
 }
 
 group 'com.particle.life.app'
