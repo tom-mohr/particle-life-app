@@ -12,6 +12,8 @@ ext {
 }
 
 jar {
+    mainClassName = "com.particle_life.app.Main"  // required for "run" task
+
     // shadowJar will inherit all manifest configuration from this task (standard jar)
     manifest {
         attributes "Main-Class": "com.particle_life.app.Main"
