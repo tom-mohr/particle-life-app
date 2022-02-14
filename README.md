@@ -2,17 +2,19 @@
 
 A GUI for [github.com/tom-mohr/particle-life](https://github.com/tom-mohr/particle-life).
 
+
 # Requirements
 
 - Windows
 - Java 16 or higher
 
+
 # Build, Execution
 
 To start the application, run `./gradlew run` from the project root.
 
-To generate an executable JAR file, run `./gradlew shadowJar` from the project root.
-This generates a JAR file in `./build/libs/` than can be run with `java -jar <filename>`.
+To generate an executable, run `./gradlew assembleApp` from the project root.
+This generates an `.exe` along with other files in `./build/app/`.
 
 
 # Shortcuts
