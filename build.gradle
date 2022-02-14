@@ -1,7 +1,40 @@
 plugins {
     id "java"
-    id 'com.github.johnrengelman.shadow' version '7.1.2'  // "shadowJar" task and "shadow" configuration
-    id "application"
+    id "application"                            // for "run" task
+    id 'edu.sc.seis.launch4j' version '2.5.1'   // for generating .exe
+    id 'org.beryx.runtime' version '1.12.7'     // for generating JRE
+}
+
+launch4j {
+    mainClassName = 'com.particle_life.app.Main'
+    dontWrapJar = true
+    bundledJre64Bit = true
+    bundledJrePath = "jre"
+}
+
+// creates folder "jre"
+runtime {
+    options = ["--add-modules", "ALL-MODULE-PATH"]
+    //modules = []
+    //additive = true
+}
+
+task copyJre (type: Copy) {
+    dependsOn tasks.runtime
+
+    from layout.buildDirectory.dir("jre")
+    into layout.buildDirectory.dir("app/jre")
+}
+
+task copyLaunch4j (type: Copy) {
+    dependsOn tasks.createExe
+
+    from layout.buildDirectory.dir("launch4j")
+    into layout.buildDirectory.dir("app")
+}
+
+task assembleApp {
+    dependsOn tasks.copyLaunch4j, tasks.copyJre
 }
 
 group 'com.particle.life.app'
@@ -14,11 +47,6 @@ ext {
 
 jar {
     mainClassName = "com.particle_life.app.Main"  // required for "run" task
-
-    // shadowJar will inherit all manifest configuration from this task (standard jar)
-    manifest {
-        attributes "Main-Class": "com.particle_life.app.Main"
-    }
 }
 
 repositories {
@@ -35,7 +63,6 @@ dependencies {
 
     // imGui
     implementation "io.github.spair:imgui-java-binding:$imguiVersion"
-    implementation "io.github.spair:imgui-java-lwjgl3:$imguiVersion"
     implementation "io.github.spair:imgui-java-natives-windows:$imguiVersion"
 
     // LWJGL
