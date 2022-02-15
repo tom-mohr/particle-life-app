@@ -14,9 +14,11 @@ launch4j {
 
 // creates folder "jre"
 runtime {
-    options = ["--add-modules", "ALL-MODULE-PATH"]
-    //modules = []
-    //additive = true
+    options = ["--compress", "2"]
+    modules = [
+            "jdk.zipfs"  // needed for "jar" FileSystemProvider (ZipFileSystemProvider), not detected automatically by plugin
+    ]
+    additive = true
 }
 
 task copyJre (type: Copy) {
