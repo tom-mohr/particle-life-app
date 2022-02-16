@@ -1,15 +1,10 @@
 package com.particle_life.app.shaders;
 
 import com.particle_life.app.color.Color;
+import com.particle_life.app.io.ResourceAccess;
 import org.joml.Matrix4d;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.stream.Collectors;
-
 import static org.lwjgl.opengl.GL20.*;
-import static org.lwjgl.opengl.GL30.*;
 import static org.lwjgl.opengl.GL32.GL_GEOMETRY_SHADER;
 
 /**
@@ -57,9 +52,9 @@ public class ParticleShader {
 
     private int loadShaders(String vertexShaderResource, String geometryShaderResource, String fragmentShaderResource) {
 
-        String vertSrc = getResourceFileContent(vertexShaderResource);
-        String geomSrc = getResourceFileContent(geometryShaderResource);
-        String fragSrc = getResourceFileContent(fragmentShaderResource);
+        String vertSrc = ResourceAccess.readTextFile(vertexShaderResource);
+        String geomSrc = ResourceAccess.readTextFile(geometryShaderResource);
+        String fragSrc = ResourceAccess.readTextFile(fragmentShaderResource);
 
         int vertShaderObject = glCreateShader(GL_VERTEX_SHADER);
         int geomShaderObject = glCreateShader(GL_GEOMETRY_SHADER);
@@ -101,13 +96,6 @@ public class ParticleShader {
             System.err.println(infoLog);
 
         }
-    }
-
-    private String getResourceFileContent(String path) {
-        InputStream inputStream = ClassLoader.getSystemClassLoader().getResourceAsStream(path);
-        return new BufferedReader(new InputStreamReader(inputStream))
-                .lines()
-                .collect(Collectors.joining("\n"));
     }
 
     /**

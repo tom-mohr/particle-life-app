@@ -1,17 +1,17 @@
 package com.particle_life.app.color;
 
+import com.particle_life.app.io.ResourceAccess;
 import com.particle_life.app.selection.InfoWrapper;
 import com.particle_life.app.selection.InfoWrapperProvider;
 
 import java.io.IOException;
-import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 
 public class PalettesProvider implements InfoWrapperProvider<Palette> {
 
@@ -33,7 +33,7 @@ public class PalettesProvider implements InfoWrapperProvider<Palette> {
     private List<InfoWrapper<Palette>> loadPalettesFromFiles() throws IOException, URISyntaxException {
         List<InfoWrapper<Palette>> palettes = new ArrayList<>();
 
-        List<Path> paletteFiles = getResourceFolderFiles("palettes");
+        List<Path> paletteFiles = ResourceAccess.listFiles("palettes");
 
         for (Path path : paletteFiles) {
 
@@ -54,22 +54,6 @@ public class PalettesProvider implements InfoWrapperProvider<Palette> {
         }
 
         return palettes;
-    }
-
-    private static List<Path> getResourceFolderFiles(String folder) throws IOException, URISyntaxException {
-        URI uri = ClassLoader.getSystemClassLoader().getResource(folder).toURI();
-        Path path = uri.getScheme().equals("jar") ?
-                FileSystems.newFileSystem(uri, Collections.emptyMap()).getPath(folder)
-                : Paths.get(uri);
-        return getFilesInDirectory(path);
-
-
-    }
-
-    private static List<Path> getFilesInDirectory(Path path) throws IOException {
-        return Files.walk(path, 1)
-                .skip(1)  // first entry is just the directory
-                .collect(Collectors.toList());
     }
 
     private Optional<Palette> parsePalette(String fileContent) {
