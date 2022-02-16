@@ -12,13 +12,13 @@ public class ShaderProvider implements InfoWrapperProvider<ParticleShader> {
         List<InfoWrapper<ParticleShader>> shaders = new ArrayList<>();
 
         shaders.add(new InfoWrapper<>("default",
-                new ParticleShader("/shaders/default.vert", "/shaders/default.geom", "/shaders/default.frag")));
+                new ParticleShader("shaders/default.vert", "shaders/default.geom", "shaders/default.frag")));
         shaders.add(new InfoWrapper<>("repeat", "Draws copies of particles (without colors) beyond the borders. This is helpful if \"wrap\" is enabled.",
-                new ParticleShader("/shaders/default.vert", "/shaders/repeat.geom", "/shaders/default.frag")));
+                new ParticleShader("shaders/default.vert", "shaders/repeat.geom", "shaders/default.frag")));
         shaders.add(new InfoWrapper<>("velocity brightness", "Brightness based on velocity.",
-                new ParticleShader("/shaders/speed_fade.vert", "/shaders/default.geom", "/shaders/default.frag")));
+                new ParticleShader("shaders/speed_fade.vert", "shaders/default.geom", "shaders/default.frag")));
         shaders.add(new InfoWrapper<>("velocity color", "Color based on velocity. Ignores the current color palette.",
-                new ParticleShader("/shaders/speed.vert", "/shaders/default.geom", "/shaders/default.frag")));
+                new ParticleShader("shaders/speed.vert", "shaders/default.geom", "shaders/default.frag")));
 
         return shaders;
     }

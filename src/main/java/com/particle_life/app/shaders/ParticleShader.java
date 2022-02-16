@@ -4,6 +4,7 @@ import com.particle_life.app.color.Color;
 import org.joml.Matrix4d;
 
 import java.io.BufferedReader;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.stream.Collectors;
 
@@ -103,7 +104,8 @@ public class ParticleShader {
     }
 
     private String getResourceFileContent(String path) {
-        return new BufferedReader(new InputStreamReader(getClass().getResourceAsStream(path)))
+        InputStream inputStream = ClassLoader.getSystemClassLoader().getResourceAsStream(path);
+        return new BufferedReader(new InputStreamReader(inputStream))
                 .lines()
                 .collect(Collectors.joining("\n"));
     }

@@ -969,9 +969,9 @@ public class Main extends App {
     }
 
     private void textureTest() throws IOException {
-//        URL url = getClass().getClassLoader().getResourceAsStream();
-        String filename = "./textures/particle.png";
-        URL url = getClass().getClassLoader().getResource(filename);
+//        URL url = ClassLoader.getSystemClassLoader().getResourceAsStream();
+        String filename = "textures/particle.png";
+        URL url = ClassLoader.getSystemClassLoader().getResource(filename);
         System.out.println(url);
         BufferedImage img = ImageIO.read(url);
         int imgWidth = img.getWidth();

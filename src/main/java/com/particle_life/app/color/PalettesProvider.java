@@ -33,7 +33,7 @@ public class PalettesProvider implements InfoWrapperProvider<Palette> {
     private List<InfoWrapper<Palette>> loadPalettesFromFiles() throws IOException, URISyntaxException {
         List<InfoWrapper<Palette>> palettes = new ArrayList<>();
 
-        List<Path> paletteFiles = getResourceFolderFiles("/palettes");
+        List<Path> paletteFiles = getResourceFolderFiles("palettes");
 
         for (Path path : paletteFiles) {
 
@@ -57,7 +57,7 @@ public class PalettesProvider implements InfoWrapperProvider<Palette> {
     }
 
     private static List<Path> getResourceFolderFiles(String folder) throws IOException, URISyntaxException {
-        URI uri = PalettesProvider.class.getResource(folder).toURI();
+        URI uri = ClassLoader.getSystemClassLoader().getResource(folder).toURI();
         Path path = uri.getScheme().equals("jar") ?
                 FileSystems.newFileSystem(uri, Collections.emptyMap()).getPath(folder)
                 : Paths.get(uri);
