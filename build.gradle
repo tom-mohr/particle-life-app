@@ -6,6 +6,7 @@ plugins {
 }
 
 launch4j {
+    icon = "${projectDir}/favicon.ico"
     mainClassName = 'com.particle_life.app.Main'
     dontWrapJar = true
     bundledJre64Bit = true
