@@ -39,6 +39,12 @@ task assembleApp {
     dependsOn tasks.copyLaunch4j, tasks.copyJre
 }
 
+task zipApp (type: Zip) {
+    dependsOn tasks.assembleApp
+    from layout.buildDirectory.dir("app")
+    destinationDirectory = layout.buildDirectory.dir("zipApp")
+}
+
 group 'com.particle.life.app'
 version '1.0.0'
 
