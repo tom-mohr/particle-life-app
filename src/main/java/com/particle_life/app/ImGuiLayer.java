@@ -1,15 +1,12 @@
 package com.particle_life.app;
 
-import imgui.ImGui;
-import imgui.ImGuiIO;
-import imgui.ImGuiStyle;
+import imgui.*;
 import imgui.callback.ImStrConsumer;
 import imgui.callback.ImStrSupplier;
 import imgui.flag.ImGuiBackendFlags;
 import imgui.flag.ImGuiConfigFlags;
 import imgui.flag.ImGuiKey;
 import imgui.flag.ImGuiMouseCursor;
-import imgui.gl3.ImGuiImplGl3;
 import org.lwjgl.glfw.*;
 
 import java.util.ArrayList;
@@ -230,6 +227,23 @@ public class ImGuiLayer {
         style.setScrollbarRounding(0);
         style.setFrameBorderSize(1);
         ImGui.styleColorsClassic();
+    }
+
+    /**
+     * scale everything to a readable size
+     * @param scaleFactor 1.0 for original size
+     */
+    public void scaleGui(float scaleFactor) {
+
+        ImGuiStyle style = ImGui.getStyle();
+        style.scaleAllSizes(scaleFactor);  // scale buttons and other gui elements
+
+        // scale font size
+        ImFontAtlas fontAtlas = io.getFonts();
+        ImFontConfig fontConfig = new ImFontConfig();
+        fontConfig.setSizePixels(13 * scaleFactor); // default font size is 13px
+        fontAtlas.addFontDefault(fontConfig);
+        fontConfig.destroy();
     }
 
     public void processEvents() {

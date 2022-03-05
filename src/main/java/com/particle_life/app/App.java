@@ -10,7 +10,6 @@ import org.lwjgl.system.MemoryStack;
 import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.glClearColor;
-import static org.lwjgl.opengl.GL11.glViewport;
 import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
@@ -24,6 +23,9 @@ public abstract class App {
     protected double mouseY = -1;
     protected double pmouseX = mouseX;// previous mouse position
     protected double pmouseY = mouseY;
+
+    // global scaling of GUI -> apply this to window sizes etc.
+    protected float scale = 1.0f;
 
     // remember window position and size before switching to fullscreen
     private int windowPosX;
@@ -49,6 +51,9 @@ public abstract class App {
         ImGuiLayer imGuiLayer = new ImGuiLayer(window);
         imGuiLayer.initImGui();
         setCallbacks(imGuiLayer);
+
+        scale = (float) height / 1080;
+        imGuiLayer.scaleGui(scale);
 
         setup();
 

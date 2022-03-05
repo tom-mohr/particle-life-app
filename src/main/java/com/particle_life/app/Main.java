@@ -309,7 +309,7 @@ public class Main extends App {
                         }
 
                         // MATRIX
-                        ImGuiMatrix.draw(200, 200,
+                        ImGuiMatrix.draw(200 * scale, 200 * scale,
                                 palettes.getActive().object,
                                 matrixGuiStepSize,
                                 settings.matrix,
@@ -603,8 +603,8 @@ public class Main extends App {
         }
 
         ImGui.setNextWindowBgAlpha(guiBackgroundAlpha);
-        ImGui.setNextWindowSize(400, 400, ImGuiCond.Once);
-        ImGui.setNextWindowPos((width - 400) / 2f, (height - 400) / 2f, ImGuiCond.Once);
+        ImGui.setNextWindowSize(400 * scale, 400 * scale, ImGuiCond.Once);
+        ImGui.setNextWindowPos((width - 400 * scale) / 2f, (height - 400 * scale) / 2f, ImGuiCond.Once);
         if (showGraphicsSettings.get() && showGui.get()) {
             if (ImGui.begin("Graphics Settings", showGraphicsSettings, ImGuiWindowFlags.None
                     | ImGuiWindowFlags.NoResize
