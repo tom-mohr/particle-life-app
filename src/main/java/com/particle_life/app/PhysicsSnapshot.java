@@ -2,20 +2,18 @@ package com.particle_life.app;
 
 import com.particle_life.Particle;
 import com.particle_life.PhysicsSettings;
-import com.particle_life.multithreading.ThreadUtility;
+import com.particle_life.ThreadUtility;
 
 class PhysicsSnapshot {
 
     private static final int PREFERRED_NUMBER_OF_THREADS = 12;
 
-    double[] x;
-    double[] v;
+    double[] positions;
+    double[] velocities;
     int[] types;
 
     PhysicsSettings settings;
-    double actualDt;
-    double avgFramerate;
-    boolean pause;
+    int particleCount;
     int[] typeCount;
 
     /**
@@ -29,10 +27,7 @@ class PhysicsSnapshot {
 
         settings = p.settings.deepCopy();
 
-        actualDt = p.getActualDt();
-        avgFramerate = p.getAvgFramerate();
-        pause = p.pause;
-
+        particleCount = p.particles.length;
         typeCount = p.getTypeCount();
 
         snapshotTime = System.currentTimeMillis();
@@ -45,8 +40,8 @@ class PhysicsSnapshot {
         int n = particles.length;
 
         if (types == null || types.length != n) {
-            x = new double[n * 3];
-            v = new double[n * 3];
+            positions = new double[n * 3];
+            velocities = new double[n * 3];
             types = new int[n];
         }
 
@@ -55,13 +50,13 @@ class PhysicsSnapshot {
 
             final int i3 = 3 * i;
 
-            x[i3] = p.x.x;
-            x[i3 + 1] = p.x.y;
-            x[i3 + 2] = p.x.z;
+            positions[i3] = p.position.x;
+            positions[i3 + 1] = p.position.y;
+            positions[i3 + 2] = p.position.z;
 
-            v[i3] = p.v.x;
-            v[i3 + 1] = p.v.y;
-            v[i3 + 2] = p.v.z;
+            velocities[i3] = p.velocity.x;
+            velocities[i3 + 1] = p.velocity.y;
+            velocities[i3 + 2] = p.velocity.z;
 
             types[i] = p.type;
 

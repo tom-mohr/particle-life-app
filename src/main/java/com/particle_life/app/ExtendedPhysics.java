@@ -55,9 +55,7 @@ class ExtendedPhysics extends Physics {
         int newCount = Arrays.stream(typeCount).sum();
         if (newCount != particles.length) {
 
-            settings.n = newCount;
-
-            Particle[] newParticles = new Particle[settings.n];
+            Particle[] newParticles = new Particle[newCount];
 
             int[] actualTypeCount = new int[nTypes];
             Arrays.fill(actualTypeCount, 0);
@@ -81,7 +79,7 @@ class ExtendedPhysics extends Physics {
             // now i points at the end (exclusive) of the reusable particles
 
             // copy as much as possible
-            int copyLength = Math.min(settings.n, particles.length);
+            int copyLength = Math.min(newCount, particles.length);
             int k = 0;
             while (k < copyLength) {
                 newParticles[k] = particles[k];
@@ -89,13 +87,13 @@ class ExtendedPhysics extends Physics {
             }
 
             // if necessary, fill up rest with new particles
-            while (k < settings.n) {
+            while (k < newCount) {
                 newParticles[k] = new Particle();
                 k++;
             }
 
             // change types of all particles that couldn't be reused
-            while (i < settings.n) {
+            while (i < newCount) {
 
                 // find type that has too few particles
                 int type = ArrayUtils.findFirstIndexWithLess(actualTypeCount, typeCount);  // need more of this type

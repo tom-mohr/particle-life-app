@@ -56,13 +56,15 @@ public class Main extends App {
     private final Renderer renderer = new Renderer();
 
     private ExtendedPhysics physics;
+    private Loop loop;
+    private boolean autoDt = true;
+    private double fallbackDt = 0.02;
     private PhysicsSnapshot physicsSnapshot;
     public AtomicBoolean newSnapshotAvailable = new AtomicBoolean(false);
 
     // local copy of snapshot:
     private PhysicsSettings settings;
-    private double physicsActualDt;
-    private double physicsAvgFramerate;
+    private int particleCount;
     private int preferredNumberOfThreads;
 
     // particle rendering: constants
@@ -142,12 +144,21 @@ public class Main extends App {
         physicsSnapshot = new PhysicsSnapshot();
         physicsSnapshot.take(physics);
         newSnapshotAvailable.set(true);
-        physics.startLoop();
+
+        loop = new Loop();
+        loop.start(dt -> {
+            physics.settings.dt = autoDt ? dt : fallbackDt;
+            physics.update();
+        });
     }
 
     @Override
     protected void beforeClose() {
-        physics.stopLoop();
+        try {
+            loop.stop(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         renderer.dispose();
     }
 
@@ -171,11 +182,11 @@ public class Main extends App {
             Coordinates coordinates = new Coordinates(width, height, shift, zoom);
             final Vector3d w = coordinates.world(pmouseX, pmouseY);
             final Vector3d delta = coordinates.world(mouseX, mouseY).sub(w);
-            physics.enqueue(() -> {
+            loop.enqueue(() -> {
                 for (Particle p : physics.particles) {
-                    if (physics.distance(w, p.x) < 0.1) {
-                        p.x.add(delta);
-                        physics.ensurePosition(p.x);
+                    if (physics.distance(w, p.position) < 0.1) {
+                        p.position.add(delta);
+                        physics.ensurePosition(p.position);
                     }
                 }
             });
@@ -188,16 +199,15 @@ public class Main extends App {
             // get local copy of snapshot
 
             //todo: only write types if necessary?
-            renderer.bufferParticleData(physicsSnapshot.x, physicsSnapshot.v, physicsSnapshot.types);
+            renderer.bufferParticleData(physicsSnapshot.positions, physicsSnapshot.velocities, physicsSnapshot.types);
             settings = physicsSnapshot.settings.deepCopy();
-            physicsActualDt = physicsSnapshot.actualDt;
-            physicsAvgFramerate = physicsSnapshot.avgFramerate;
+            particleCount = physicsSnapshot.particleCount;
             preferredNumberOfThreads = physics.preferredNumberOfThreads;
 
             newSnapshotAvailable.set(false);
         }
 
-        physics.doOnce(() -> {
+        loop.doOnce(() -> {
             physicsSnapshot.take(physics);
             newSnapshotAvailable.set(true);
         });
@@ -254,8 +264,8 @@ public class Main extends App {
                 {
                     statsFormatter.start();
                     statsFormatter.put("Graphics FPS", String.format("%.0f", renderClock.getAvgFramerate()));
-                    statsFormatter.put("Physics FPS", physicsAvgFramerate < 100000 ? String.format("%.0f", physicsAvgFramerate) : "inf");
-                    statsFormatter.put("Physics vs. Graphics", physicsAvgFramerate < 100000 ? String.format("%.2f", physicsAvgFramerate / renderClock.getAvgFramerate()) : "inf");
+                    statsFormatter.put("Physics FPS", loop.getAvgFramerate() < 100000 ? String.format("%.0f", loop.getAvgFramerate()) : "inf");
+                    statsFormatter.put("Physics vs. Graphics", loop.getAvgFramerate() < 100000 ? String.format("%.2f", loop.getAvgFramerate() / renderClock.getAvgFramerate()) : "inf");
                     if (advancedGui) {
                         statsFormatter.put("Graphics FPS Standard Deviation", String.format("%.2f", renderClock.getStandardDeviation()));
                         statsFormatter.put("debug", String.format("%.1f ms", debugTimer.getAvgDtMillis()));
@@ -269,10 +279,10 @@ public class Main extends App {
                 {
 
                     // N
-                    ImInt particleCountInput = new ImInt(settings.n);
+                    ImInt particleCountInput = new ImInt(particleCount);
                     if (ImGui.inputInt("particle count", particleCountInput, 1000, 1000, ImGuiInputTextFlags.EnterReturnsTrue)) {
                         final int newCount = Math.max(0, particleCountInput.get());
-                        physics.enqueue(() -> physics.settings.n = newCount);
+                        loop.enqueue(() -> physics.setParticleCount(newCount));
                     }
 
                     ImGui.separator();
@@ -283,7 +293,7 @@ public class Main extends App {
                         ImInt matrixSizeInput = new ImInt(settings.matrix.size());
                         if (ImGui.inputInt("types", matrixSizeInput, 1, 1, ImGuiInputTextFlags.EnterReturnsTrue)) {
                             final int newSize = Math.max(1, matrixSizeInput.get());
-                            physics.enqueue(() -> physics.setMatrixSize(newSize));
+                            loop.enqueue(() -> physics.setMatrixSize(newSize));
                         }
 
                         if (advancedGui) {
@@ -295,8 +305,8 @@ public class Main extends App {
                                     (type, newValue) -> {
                                         final int[] newTypeCount = Arrays.copyOf(physicsSnapshot.typeCount, physicsSnapshot.typeCount.length);
                                         newTypeCount[type] = newValue;
-//                                        physics.enqueue(() -> physics.settings.n = Arrays.stream(newTypeCount).sum());
-                                        physics.enqueue(() -> physics.setTypeCount(newTypeCount));
+//                                        loop.enqueue(() -> physics.settings.n = Arrays.stream(newTypeCount).sum());
+                                        loop.enqueue(() -> physics.setTypeCount(newTypeCount));
                                     },
                                     typeCountDisplayPercentage
                             );
@@ -304,7 +314,7 @@ public class Main extends App {
                             ImGuiUtils.advancedGuiHint();
 
                             if (ImGui.button("equalize type count")) {
-                                physics.enqueue(() -> physics.setTypeCountEqual());
+                                loop.enqueue(() -> physics.setTypeCountEqual());
                             }
                         }
 
@@ -313,7 +323,7 @@ public class Main extends App {
                                 palettes.getActive().object,
                                 matrixGuiStepSize,
                                 settings.matrix,
-                                (i, j, newValue) -> physics.enqueue(() -> physics.settings.matrix.set(i, j, newValue))
+                                (i, j, newValue) -> loop.enqueue(() -> physics.settings.matrix.set(i, j, newValue))
                         );
 
                         if (advancedGui) {
@@ -326,7 +336,7 @@ public class Main extends App {
                             if (ImGui.button("Paste")) {
                                 Matrix parsedMatrix = MatrixParser.parseMatrix(ImGui.getClipboardText());
                                 if (parsedMatrix != null) {
-                                    physics.enqueue(() -> {
+                                    loop.enqueue(() -> {
                                         physics.setMatrixSize(parsedMatrix.size());
                                         physics.settings.matrix = parsedMatrix;
                                     });
@@ -337,11 +347,11 @@ public class Main extends App {
                         // MATRIX GENERATORS
                         if (renderCombo("##matrix", matrixGenerators)) {
                             final MatrixGenerator nextMatrixGenerator = matrixGenerators.getActive().object;
-                            physics.enqueue(() -> physics.matrixGenerator = nextMatrixGenerator);
+                            loop.enqueue(() -> physics.matrixGenerator = nextMatrixGenerator);
                         }
                         ImGui.sameLine();
                         if (ImGui.button("matrix [m]")) {
-                            physics.enqueue(physics::generateMatrix);
+                            loop.enqueue(physics::generateMatrix);
                         }
                     }
 
@@ -350,11 +360,11 @@ public class Main extends App {
                     // POSITION SETTERS
                     if (renderCombo("##positions", positionSetters)) {
                         final PositionSetter nextPositionSetter = positionSetters.getActive().object;
-                        physics.enqueue(() -> physics.positionSetter = nextPositionSetter);
+                        loop.enqueue(() -> physics.positionSetter = nextPositionSetter);
                     }
                     ImGui.sameLine();
                     if (ImGui.button("positions [p]")) {
-                        physics.enqueue(physics::setPositions);
+                        loop.enqueue(physics::setPositions);
                     }
 
                     ImGui.separator();
@@ -364,7 +374,7 @@ public class Main extends App {
                     }
                     ImGui.sameLine();
                     if (ImGui.button("types [t]")) {
-                        physics.enqueue(() -> {
+                        loop.enqueue(() -> {
                             TypeSetter previousTypeSetter = physics.typeSetter;
                             physics.typeSetter = typeSetters.getActive().object;
                             physics.setTypes();
@@ -381,9 +391,8 @@ public class Main extends App {
 
                     ImGui.separator();
 
-                    if (ImGui.button("%s [SPACE]".formatted(physicsSnapshot.pause ? "Unpause" : "Pause"))) {
-                        final boolean newValue = !physicsSnapshot.pause;
-                        physics.enqueue(() -> physics.pause = newValue);
+                    if (ImGui.button("%s [SPACE]".formatted(loop.pause ? "Unpause" : "Pause"))) {
+                        loop.pause ^= true;
                     }
 
                     // ACCELERATORS
@@ -391,7 +400,7 @@ public class Main extends App {
                         ImGui.text("Accelerator [v]");
                         if (renderCombo("##accelerator", accelerators)) {
                             final Accelerator nextAccelerator = accelerators.getActive().object.accelerator;
-                            physics.enqueue(() -> physics.accelerator = nextAccelerator);
+                            loop.enqueue(() -> physics.accelerator = nextAccelerator);
                         }
                         ImGui.sameLine();
                         if (accelerators.getActive().object.mayEdit) {
@@ -417,7 +426,7 @@ public class Main extends App {
 
                     if (ImGui.checkbox("wrap [w]", settings.wrap)) {
                         final boolean newWrap = !settings.wrap;
-                        physics.enqueue(() -> physics.settings.wrap = newWrap);
+                        loop.enqueue(() -> physics.settings.wrap = newWrap);
                     }
 
                     {
@@ -425,7 +434,7 @@ public class Main extends App {
                         float[] rmaxSliderValue = new float[]{displayValue};
                         if (ImGui.sliderFloat("rmax", rmaxSliderValue, 0.005f, 1.000f, String.format("%.3f", displayValue), ImGuiSliderFlags.Logarithmic)) {
                             final float newRmax = rmaxSliderValue[0];
-                            physics.enqueue(() -> physics.settings.rmax = newRmax);
+                            loop.enqueue(() -> physics.settings.rmax = newRmax);
                         }
                     }
 
@@ -435,14 +444,14 @@ public class Main extends App {
                         float[] frictionSliderValue = new float[]{(float) frictionVal};
                         if (ImGui.sliderFloat("friction", frictionSliderValue, 0.0f, 1.0f, String.format("%.3f / %.1fs", frictionVal, 1.0 / secondPart))) {
                             final double newFriction = Math.pow(frictionSliderValue[0], secondPart);
-                            physics.enqueue(() -> physics.settings.friction = newFriction);
+                            loop.enqueue(() -> physics.settings.friction = newFriction);
                         }
                     }
 
                     float[] forceFactorSliderValue = new float[]{(float) settings.forceFactor};
                     if (ImGui.sliderFloat("force", forceFactorSliderValue, 0.0f, 5.0f)) {
                         final float newForceFactor = forceFactorSliderValue[0];
-                        physics.enqueue(() -> physics.settings.forceFactor = newForceFactor);
+                        loop.enqueue(() -> physics.settings.forceFactor = newForceFactor);
                     }
 
                     if (advancedGui) {
@@ -452,17 +461,16 @@ public class Main extends App {
                         ImInt threadNumberInput = new ImInt(preferredNumberOfThreads);
                         if (ImGui.inputInt("threads", threadNumberInput, 1, 1, ImGuiInputTextFlags.EnterReturnsTrue)) {
                             final int newThreadNumber = Math.max(1, threadNumberInput.get());
-                            physics.enqueue(() -> physics.preferredNumberOfThreads = newThreadNumber);
+                            loop.enqueue(() -> physics.preferredNumberOfThreads = newThreadNumber);
                         }
 
-                        float[] dtSliderValue = new float[]{(float) settings.fallbackDt};
-                        if (ImGui.sliderFloat("##dt", dtSliderValue, 0.0f, 0.1f, String.format("%4.1f ms", settings.fallbackDt * 1000.0), ImGuiSliderFlags.Logarithmic)) {
-                            physics.enqueue(() -> physics.settings.fallbackDt = dtSliderValue[0]);
+                        float[] dtSliderValue = new float[]{(float) fallbackDt};
+                        if (ImGui.sliderFloat("##dt", dtSliderValue, 0.0f, 0.1f, String.format("%4.1f ms", fallbackDt * 1000.0), ImGuiSliderFlags.Logarithmic)) {
+                            fallbackDt = dtSliderValue[0];
                         }
                         ImGui.sameLine();
-                        if (ImGui.checkbox("fixed step", !settings.autoDt)) {
-                            final boolean newAutoDt = !settings.autoDt;
-                            physics.enqueue(() -> physics.settings.autoDt = newAutoDt);
+                        if (ImGui.checkbox("fixed step", !autoDt)) {
+                            autoDt ^= true;
                         }
                     }
                 }
@@ -507,7 +515,7 @@ public class Main extends App {
             }
             if (exportSettings.particles) {
                 ImGui.sameLine();
-                ImGui.textDisabled(settings.n + " particles");
+                ImGui.textDisabled(particleCount + " particles");
             }
 
             if (ImGui.checkbox("matrix", exportSettings.matrix)) {
@@ -523,7 +531,7 @@ public class Main extends App {
             }
             if (exportSettings.timeStep) {
                 ImGui.sameLine();
-                ImGui.textDisabled("%.1f ms".formatted(settings.fallbackDt * 1000));
+                ImGui.textDisabled("%.1f ms".formatted(fallbackDt * 1000));
             }
 
             if (ImGui.button("Cancel")) {
@@ -577,10 +585,15 @@ public class Main extends App {
 
             if (ImGui.button("Try Reset")) {
 
-                if (physics.stopLoop()) {
-                    createPhysics();
-                } else {
-                    ImGui.openPopup("Taking too long");
+                try {
+                    if (loop.stop(1000)) {
+                        createPhysics();
+                    } else {
+                        ImGui.openPopup("Taking too long");
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                    //todo: How should this be handled?
                 }
             }
 
@@ -780,7 +793,7 @@ public class Main extends App {
                             // if this accelerator is currently active, also set the accelerator of physics to the new one.
                             if (accelerators.getActive() == editingAccelerator) {
                                 final Accelerator newAccelerator = editingAccelerator.object.accelerator;
-                                physics.enqueue(() -> physics.accelerator = newAccelerator);
+                                loop.enqueue(() -> physics.accelerator = newAccelerator);
                             }
                         } else {
                             // add new
@@ -801,7 +814,7 @@ public class Main extends App {
     }
 
     private void setInitialExportSettings() {
-        exportSettings.timeStep = !settings.autoDt;
+        exportSettings.timeStep = !autoDt;
     }
 
     private void exportData() {
@@ -884,7 +897,7 @@ public class Main extends App {
             }
 
             if (ImGui.menuItem("Advanced GUI", "a", advancedGui)) {
-                advancedGui = !advancedGui;
+                advancedGui ^= true;
             }
 
             ImGui.endMenu();
@@ -986,8 +999,8 @@ public class Main extends App {
     @Override
     protected void onKeyPressed(char c) {
         switch (c) {
-            case 'a' -> advancedGui = !advancedGui;
-            case 'c' -> traces = !traces;
+            case 'a' -> advancedGui ^= true;
+            case 'c' -> traces ^= true;
             case 'h' -> {
                 if (traces) {
                     traces = false;
@@ -1008,45 +1021,45 @@ public class Main extends App {
                 // zoom to fit larger dimension
                 zoomGoal = Math.max(width, height) / (double) Math.min(width, height);
             }
-            case 'p' -> physics.enqueue(physics::setPositions);
-            case 't' -> physics.enqueue(() -> {
+            case 'p' -> loop.enqueue(physics::setPositions);
+            case 't' -> loop.enqueue(() -> {
                 TypeSetter previousTypeSetter = physics.typeSetter;
                 physics.typeSetter = typeSetters.getActive().object;
                 physics.setTypes();
                 physics.typeSetter = previousTypeSetter;
             });
-            case 'm' -> physics.enqueue(physics::generateMatrix);
-            case 'w' -> physics.enqueue(() -> physics.settings.wrap = !physics.settings.wrap);
-            case ' ' -> physics.enqueue(() -> physics.pause = !physics.pause);
+            case 'm' -> loop.enqueue(physics::generateMatrix);
+            case 'w' -> loop.enqueue(() -> physics.settings.wrap ^= true);
+            case ' ' -> loop.pause ^= true;
             case 'v' -> {
                 selectionStep(accelerators, 1);
                 final Accelerator nextAccelerator = accelerators.getActive().object.accelerator;
-                physics.enqueue(() -> physics.accelerator = nextAccelerator);
+                loop.enqueue(() -> physics.accelerator = nextAccelerator);
             }
             case 'V' -> {
                 selectionStep(accelerators, -1);
                 final Accelerator nextAccelerator = accelerators.getActive().object.accelerator;
-                physics.enqueue(() -> physics.accelerator = nextAccelerator);
+                loop.enqueue(() -> physics.accelerator = nextAccelerator);
             }
             case 'x' -> {
                 selectionStep(positionSetters, 1);
                 final PositionSetter nextPositionSetter = positionSetters.getActive().object;
-                physics.enqueue(() -> physics.positionSetter = nextPositionSetter);
+                loop.enqueue(() -> physics.positionSetter = nextPositionSetter);
             }
             case 'X' -> {
                 selectionStep(positionSetters, -1);
                 final PositionSetter nextPositionSetter = positionSetters.getActive().object;
-                physics.enqueue(() -> physics.positionSetter = nextPositionSetter);
+                loop.enqueue(() -> physics.positionSetter = nextPositionSetter);
             }
             case 'r' -> {
                 selectionStep(matrixGenerators, 1);
                 final MatrixGenerator nextMatrixGenerator = matrixGenerators.getActive().object;
-                physics.enqueue(() -> physics.matrixGenerator = nextMatrixGenerator);
+                loop.enqueue(() -> physics.matrixGenerator = nextMatrixGenerator);
             }
             case 'R' -> {
                 selectionStep(matrixGenerators, -1);
                 final MatrixGenerator nextMatrixGenerator = matrixGenerators.getActive().object;
-                physics.enqueue(() -> physics.matrixGenerator = nextMatrixGenerator);
+                loop.enqueue(() -> physics.matrixGenerator = nextMatrixGenerator);
             }
         }
     }
