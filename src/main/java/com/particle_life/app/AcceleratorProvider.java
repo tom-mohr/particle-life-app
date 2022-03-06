@@ -24,32 +24,32 @@ class AcceleratorProvider implements InfoWrapperProvider<AcceleratorCodeData> {
 
     private List<InfoWrapper<Accelerator>> createDefaultAccelerators() {
         return List.of(
-                new InfoWrapper<Accelerator>("particle life", (a, x) -> {
+                new InfoWrapper<Accelerator>("particle life", (a, pos) -> {
                     double rmin = 0.3;
-                    double dist = x.length();
+                    double dist = pos.length();
                     double force = dist < rmin ? (dist / rmin - 1) : a * (1 - Math.abs(1 + rmin - 2 * dist) / (1 - rmin));
-                    return x.mul(force / dist);
+                    return pos.mul(force / dist);
                 }),
-                new InfoWrapper<Accelerator>("rotator 90deg", (a, x) -> {
-                    double dist = x.length();
+                new InfoWrapper<Accelerator>("rotator 90deg", (a, pos) -> {
+                    double dist = pos.length();
                     double force = a * (1 - dist);
-                    Vector3d delta = new Vector3d(-x.y, x.x, 0);
+                    Vector3d delta = new Vector3d(-pos.y, pos.x, 0);
                     return delta.mul(force / dist);
                 }),
-                new InfoWrapper<Accelerator>("rotator attr", (a, x) -> {
-                    double dist = x.length();
+                new InfoWrapper<Accelerator>("rotator attr", (a, pos) -> {
+                    double dist = pos.length();
                     double force = 1 - dist;
                     double angle = -a * Math.PI;
                     Vector3d delta = new Vector3d(
-                            Math.cos(angle) * x.x + Math.sin(angle) * x.y,
-                            -Math.sin(angle) * x.x + Math.cos(angle) * x.y,
+                            Math.cos(angle) * pos.x + Math.sin(angle) * pos.y,
+                            -Math.sin(angle) * pos.x + Math.cos(angle) * pos.y,
                             0
                     );
                     return delta.mul(force / dist);
                 }),
                 new InfoWrapper<Accelerator>("planets",
-                        "works best without friction (value = 1.0)", (a, x) -> {
-                    Vector3d delta = new Vector3d(x);
+                        "works best without friction (value = 1.0)", (a, pos) -> {
+                    Vector3d delta = new Vector3d(pos);
                     double r = delta.length();
                     r = Math.max(r, 0.01);
                     return delta.mul(0.01 / (r * r * r));

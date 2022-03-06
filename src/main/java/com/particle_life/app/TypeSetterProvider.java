@@ -13,25 +13,25 @@ public class TypeSetterProvider implements InfoWrapperProvider<TypeSetter> {
         return List.of(
                 new InfoWrapper<>("fully random", new DefaultTypeSetter()),
                 new InfoWrapper<>("randomize 10%",
-                        (x, v, type, nTypes) -> Math.random() < 0.1 ? mapType(Math.random(), nTypes) : type
+                        (position, velocity, type, nTypes) -> Math.random() < 0.1 ? mapType(Math.random(), nTypes) : type
                 ),
                 new InfoWrapper<>("slices",
-                        (x, v, type, nTypes) -> mapType(0.5 * x.x + 0.5, nTypes)
+                        (position, velocity, type, nTypes) -> mapType(0.5 * position.x + 0.5, nTypes)
                 ),
                 new InfoWrapper<>("onion",
-                        (x, v, type, nTypes) -> mapType(x.length(), nTypes)
+                        (position, velocity, type, nTypes) -> mapType(position.length(), nTypes)
                 ),
                 new InfoWrapper<>("rotate",
-                        (x, v, type, nTypes) -> (type + 1) % nTypes
+                        (position, velocity, type, nTypes) -> (type + 1) % nTypes
                 ),
                 new InfoWrapper<>("flip",
-                        (x, v, type, nTypes) -> nTypes - 1 - type
+                        (position, velocity, type, nTypes) -> nTypes - 1 - type
                 ),
                 new InfoWrapper<>("more of first",
-                        (x, v, type, nTypes) -> mapType(Math.random() * Math.random(), nTypes)
+                        (position, velocity, type, nTypes) -> mapType(Math.random() * Math.random(), nTypes)
                 ),
                 new InfoWrapper<>("kill still",
-                        (x, v, type, nTypes) -> v.length() < 0.01 ? nTypes - 1 : type
+                        (position, velocity, type, nTypes) -> velocity.length() < 0.01 ? nTypes - 1 : type
                 )
         );
     }
