@@ -35,6 +35,8 @@ public class PalettesProvider implements InfoWrapperProvider<Palette> {
 
         List<Path> paletteFiles = ResourceAccess.listFiles("palettes");
 
+        paletteFiles.sort(Path::compareTo);  // sort lexicographically
+
         for (Path path : paletteFiles) {
 
             String fileContent;
