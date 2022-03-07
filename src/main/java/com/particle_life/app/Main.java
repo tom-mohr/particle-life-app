@@ -448,10 +448,10 @@ public class Main extends App {
                         }
                     }
 
-                    float[] forceFactorSliderValue = new float[]{(float) settings.forceFactor};
+                    float[] forceFactorSliderValue = new float[]{(float) settings.force};
                     if (ImGui.sliderFloat("force", forceFactorSliderValue, 0.0f, 5.0f)) {
                         final float newForceFactor = forceFactorSliderValue[0];
-                        loop.enqueue(() -> physics.settings.forceFactor = newForceFactor);
+                        loop.enqueue(() -> physics.settings.force = newForceFactor);
                     }
 
                     if (advancedGui) {
