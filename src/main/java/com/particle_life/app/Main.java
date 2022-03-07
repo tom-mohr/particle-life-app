@@ -125,9 +125,10 @@ public class Main extends App {
 
         createPhysics();
 
-        //todo: what should be the default palette?
-        if (palettes.size() > 1) {
-            palettes.setActive(1);
+        // set default selection for palette
+        String preferredPaletteName = "RainbowSmooth12.map";
+        if (palettes.hasName(preferredPaletteName)) {
+            palettes.setActive(palettes.getIndexByName(preferredPaletteName));
         }
 
         glEnable(GL_MULTISAMPLE);

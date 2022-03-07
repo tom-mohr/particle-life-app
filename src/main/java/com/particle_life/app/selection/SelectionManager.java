@@ -2,6 +2,7 @@ package com.particle_life.app.selection;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
 public class SelectionManager<T> {
@@ -63,5 +64,29 @@ public class SelectionManager<T> {
 
     public boolean contains(InfoWrapper<T> item) {
         return items.contains(item);
+    }
+
+    /**
+     * Returns whether there exists an item whose name is equal to the given string.
+     */
+    public boolean hasName(String name) {
+        return getIndexByName(name) != -1;
+    }
+
+    /**
+     * Returns the index of the first element whose name is equal to the given string.
+     * If no such element can be found, -1 is returned.
+     * @param name the name of the item
+     * @return the index of the first element with that name, or -1
+     */
+    public int getIndexByName(String name) {
+        int i = 0;
+        for (InfoWrapper<T> item : items) {
+            if (name.equals(item.name)) {
+                return i;
+            }
+            i++;
+        }
+        return -1;
     }
 }
