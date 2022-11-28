@@ -168,10 +168,32 @@ public abstract class App {
 
         imGuiLayer.keyCallbacks.add((window, key, scancode, action, mods) -> {
             if (key == GLFW_KEY_F11 && action == GLFW_PRESS) {
-                setFullscreen(!isFullscreen());
+                this.setFullscreen(!isFullscreen());
+            } else {
+                String keyName = glfwGetKeyName(key, scancode);
+                if (keyName == null) {
+                    // try to recover special keys
+                    keyName = switch (key) {
+                        case GLFW_KEY_SPACE -> " ";
+                        case GLFW_KEY_LEFT -> "LEFT";
+                        case GLFW_KEY_RIGHT -> "RIGHT";
+                        case GLFW_KEY_UP -> "UP";
+                        case GLFW_KEY_DOWN -> "DOWN";
+                        default -> null;
+                    };
+                }
+                if (keyName != null) {
+                    if (mods == GLFW_MOD_SHIFT) {
+                        keyName = keyName.toUpperCase();
+                    }
+                    switch (action) {
+                        case GLFW_PRESS -> this.onKeyPressed(keyName);
+                        case GLFW_REPEAT -> this.onKeyRepeated(keyName);
+                        case GLFW_RELEASE -> this.onKeyReleased(keyName);
+                    }
+                }
             }
         });
-        imGuiLayer.charCallbacks.add((window1, codepoint) -> this.onKeyPressed(Character.toChars(codepoint)[0]));
         imGuiLayer.cursorPosCallbacks.add((window1, xpos, ypos) -> {
             mouseX = xpos;
             mouseY = ypos;
@@ -247,7 +269,13 @@ public abstract class App {
     protected void draw(double dt) {
     }
 
-    protected void onKeyPressed(char c) {
+    protected void onKeyPressed(String keyName) {
+    }
+
+    protected void onKeyRepeated(String keyName) {
+    }
+
+    protected void onKeyReleased(String keyName) {
     }
 
     /**

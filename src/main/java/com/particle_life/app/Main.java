@@ -998,11 +998,12 @@ public class Main extends App {
     }
 
     @Override
-    protected void onKeyPressed(char c) {
-        switch (c) {
-            case 'a' -> advancedGui ^= true;
-            case 'c' -> traces ^= true;
-            case 'h' -> {
+    protected void onKeyPressed(String keyName) {
+        System.out.println(keyName);
+        switch (keyName) {
+            case "a" -> advancedGui ^= true;
+            case "c" -> traces ^= true;
+            case "h" -> {
                 if (traces) {
                     traces = false;
                     showGui.set(true);
@@ -1010,54 +1011,54 @@ public class Main extends App {
                     showGui.set(!showGui.get());
                 }
             }
-            case 'l' -> selectionStep(palettes, 1);
-            case 'L' -> selectionStep(palettes, -1);
-            case 's' -> selectionStep(shaders, 1);
-            case 'S' -> selectionStep(shaders, -1);
-            case '+' -> zoomGoal *= Math.pow(zoomStepFactor, 2);// more steps than when scrolling
-            case '-' -> zoomGoal /= Math.pow(zoomStepFactor, 2);
-            case 'z' -> resetCamera(true);
-            case 'Z' -> {
+            case "l" -> selectionStep(palettes, 1);
+            case "L" -> selectionStep(palettes, -1);
+            case "s" -> selectionStep(shaders, 1);
+            case "S" -> selectionStep(shaders, -1);
+            case "+" -> zoomGoal *= Math.pow(zoomStepFactor, 2);// more steps than when scrolling
+            case "-" -> zoomGoal /= Math.pow(zoomStepFactor, 2);
+            case "z" -> resetCamera(true);
+            case "Z" -> {
                 resetCamera(true);
                 // zoom to fit larger dimension
                 zoomGoal = Math.max(width, height) / (double) Math.min(width, height);
             }
-            case 'p' -> loop.enqueue(physics::setPositions);
-            case 't' -> loop.enqueue(() -> {
+            case "p" -> loop.enqueue(physics::setPositions);
+            case "t" -> loop.enqueue(() -> {
                 TypeSetter previousTypeSetter = physics.typeSetter;
                 physics.typeSetter = typeSetters.getActive().object;
                 physics.setTypes();
                 physics.typeSetter = previousTypeSetter;
             });
-            case 'm' -> loop.enqueue(physics::generateMatrix);
-            case 'w' -> loop.enqueue(() -> physics.settings.wrap ^= true);
-            case ' ' -> loop.pause ^= true;
-            case 'v' -> {
+            case "m" -> loop.enqueue(physics::generateMatrix);
+            case "w" -> loop.enqueue(() -> physics.settings.wrap ^= true);
+            case " " -> loop.pause ^= true;
+            case "v" -> {
                 selectionStep(accelerators, 1);
                 final Accelerator nextAccelerator = accelerators.getActive().object.accelerator;
                 loop.enqueue(() -> physics.accelerator = nextAccelerator);
             }
-            case 'V' -> {
+            case "V" -> {
                 selectionStep(accelerators, -1);
                 final Accelerator nextAccelerator = accelerators.getActive().object.accelerator;
                 loop.enqueue(() -> physics.accelerator = nextAccelerator);
             }
-            case 'x' -> {
+            case "x" -> {
                 selectionStep(positionSetters, 1);
                 final PositionSetter nextPositionSetter = positionSetters.getActive().object;
                 loop.enqueue(() -> physics.positionSetter = nextPositionSetter);
             }
-            case 'X' -> {
+            case "X" -> {
                 selectionStep(positionSetters, -1);
                 final PositionSetter nextPositionSetter = positionSetters.getActive().object;
                 loop.enqueue(() -> physics.positionSetter = nextPositionSetter);
             }
-            case 'r' -> {
+            case "r" -> {
                 selectionStep(matrixGenerators, 1);
                 final MatrixGenerator nextMatrixGenerator = matrixGenerators.getActive().object;
                 loop.enqueue(() -> physics.matrixGenerator = nextMatrixGenerator);
             }
-            case 'R' -> {
+            case "R" -> {
                 selectionStep(matrixGenerators, -1);
                 final MatrixGenerator nextMatrixGenerator = matrixGenerators.getActive().object;
                 loop.enqueue(() -> physics.matrixGenerator = nextMatrixGenerator);
