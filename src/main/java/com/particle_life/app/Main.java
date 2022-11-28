@@ -71,8 +71,9 @@ public class Main extends App {
     private double zoomStepFactor = 1.2;
     private float particleSize = 4.0f;   // particle size on screen (in pixels)
     private boolean keepParticleSizeIndependentOfZoom = false;
-    private double shiftSmoothness = 0.3f;
-    private double zoomSmoothness = 0.3f;
+    private double shiftSmoothness = 0.3;
+    private double zoomSmoothness = 0.3;
+    private double camMovementSpeed = 1.0;
 
     // particle rendering: controls
     private boolean traces = false;
@@ -82,6 +83,10 @@ public class Main extends App {
     private double zoomGoal = zoom;
     boolean draggingShift = false;
     boolean draggingParticles = false;
+    boolean leftPressed = false;
+    boolean rightPressed = false;
+    boolean upPressed = false;
+    boolean downPressed = false;
 
     // GUI: style
     private float guiBackgroundAlpha = 1.0f;
@@ -175,6 +180,13 @@ public class Main extends App {
                     .shift);
             shiftGoal.set(shift);  // don't use smoothing while dragging
         }
+
+        double camMovementStepSize = camMovementSpeed / zoom;
+        camMovementStepSize *= renderClock.getDtMillis() / 1000.0;  // keep constant speed regardless of framerate
+        if (leftPressed) shiftGoal.add(camMovementStepSize, 0.0, 0.0);
+        if (rightPressed) shiftGoal.add(-camMovementStepSize, 0.0, 0.0);
+        if (upPressed) shiftGoal.add(0.0, camMovementStepSize, 0.0);
+        if (downPressed) shiftGoal.add(0.0, -camMovementStepSize, 0.0);
 
         shift.lerp(shiftGoal, shiftSmoothness);
         zoom = MathUtils.lerp(zoom, zoomGoal, zoomSmoothness);
@@ -623,11 +635,19 @@ public class Main extends App {
             if (ImGui.begin("Graphics Settings", showGraphicsSettings, ImGuiWindowFlags.None
                     | ImGuiWindowFlags.NoResize
                     | ImGuiWindowFlags.NoFocusOnAppearing)) {
+
                 {
-                    float[] inputValue = new float[]{(float) zoomSmoothness};
-                    if (ImGui.sliderFloat("Camera Speed", inputValue, 0.0f, 1.0f, "%0.2f")) {
-                        zoomSmoothness = inputValue[0];
-                        shiftSmoothness = inputValue[0];
+                    float[] inputValue = new float[]{(float) camMovementSpeed};
+                    if (ImGui.sliderFloat("Cam Speed", inputValue, 0.0f, 2.0f, "%0.2f")) {
+                        camMovementSpeed = inputValue[0];
+                    }
+                }
+
+                {
+                    float[] inputValue = new float[]{(float) (1.0 - zoomSmoothness)};
+                    if (ImGui.sliderFloat("Cam Smoothing", inputValue, 0.0f, 1.0f, "%0.2f")) {
+                        zoomSmoothness = 1.0 - inputValue[0];
+                        shiftSmoothness = 1.0 - inputValue[0];
                     }
                 }
 
@@ -644,7 +664,7 @@ public class Main extends App {
 
                 {
                     float[] inputValue = new float[]{guiBackgroundAlpha};
-                    if (ImGui.sliderFloat("GUI Background Alpha", inputValue, 0.0f, 1.0f)) {
+                    if (ImGui.sliderFloat("GUI Opacity", inputValue, 0.0f, 1.0f)) {
                         guiBackgroundAlpha = inputValue[0];
                     }
                 }
@@ -999,8 +1019,11 @@ public class Main extends App {
 
     @Override
     protected void onKeyPressed(String keyName) {
-        System.out.println(keyName);
         switch (keyName) {
+            case "LEFT" -> leftPressed = true;
+            case "RIGHT" -> rightPressed = true;
+            case "UP" -> upPressed = true;
+            case "DOWN" -> downPressed = true;
             case "a" -> advancedGui ^= true;
             case "c" -> traces ^= true;
             case "h" -> {
@@ -1063,6 +1086,16 @@ public class Main extends App {
                 final MatrixGenerator nextMatrixGenerator = matrixGenerators.getActive().object;
                 loop.enqueue(() -> physics.matrixGenerator = nextMatrixGenerator);
             }
+        }
+    }
+
+    @Override
+    protected void onKeyReleased(String keyName) {
+        switch (keyName) {
+            case "LEFT" -> leftPressed = false;
+            case "RIGHT" -> rightPressed = false;
+            case "UP" -> upPressed = false;
+            case "DOWN" -> downPressed = false;
         }
     }
 
