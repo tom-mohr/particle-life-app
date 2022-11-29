@@ -5,6 +5,8 @@ A GUI for the [Particle Life Framework](https://github.com/tom-mohr/particle-lif
 - [Download](https://particle-life.com)
 - [Documentation](https://particle-life.com/app/docs)
 
+![Screenshot of the App](./readme_assets/app_demo.png)
+
 ## How to Build
 
 If you just want to try out this application, simply use the download link above.
