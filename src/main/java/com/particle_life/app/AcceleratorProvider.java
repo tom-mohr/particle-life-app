@@ -30,6 +30,12 @@ class AcceleratorProvider implements InfoWrapperProvider<AcceleratorCodeData> {
                     double force = dist < rmin ? (dist / rmin - 1) : a * (1 - Math.abs(1 + rmin - 2 * dist) / (1 - rmin));
                     return pos.mul(force / dist);
                 }),
+                new InfoWrapper<Accelerator>("particle life squared", (a, pos) -> {
+                    double rmin = 0.3;
+                    double dist = pos.length();
+                    double force = dist < rmin ? (dist / rmin - 1) : a * (1 - Math.abs(1 + rmin - 2 * dist) / (1 - rmin));
+                    return pos.mul(force / (dist * dist));
+                }),
                 new InfoWrapper<Accelerator>("rotator 90deg", (a, pos) -> {
                     double dist = pos.length();
                     double force = a * (1 - dist);
