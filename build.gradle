@@ -5,6 +5,11 @@ plugins {
     id 'org.beryx.runtime' version '1.12.7'     // for generating JRE
 }
 
+application {
+    applicationDefaultJvmArgs = ["-Xcomp"]  // forces immediate JIT compilation of ALL classes and methods
+                                            // (needed to fix high graphics FPS variance)
+}
+
 launch4j {
     icon = "${projectDir}/favicon.ico"
     mainClassName = 'com.particle_life.app.Main'
