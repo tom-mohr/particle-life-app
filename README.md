@@ -7,6 +7,8 @@ A GUI for the [Particle Life Framework](https://github.com/tom-mohr/particle-lif
 
 Join the [Discord server](https://discord.gg/Fd64AhKzMD)!
 
+**Tip:** To make the graphics fast and smooth, try increasing the number of particles to ~100,000 and then lowering it again. After this, the graphics FPS should stabilize at your display's maximum framerate.
+
 ![Screenshot of the App](./readme_assets/app_demo.png)
 
 ## How to Build
