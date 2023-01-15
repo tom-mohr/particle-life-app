@@ -40,8 +40,6 @@ public class Main extends App {
 
     // data
     private final Clock renderClock = new Clock(60);
-    private final Clock renderTimer = new Clock(60);
-    public static final Clock debugTimer = new Clock(10);
     private final SelectionManager<ParticleShader> shaders = new SelectionManager<>();
     private final SelectionManager<Palette> palettes = new SelectionManager<>();
     private final SelectionManager<AcceleratorCodeData> accelerators = new SelectionManager<>();
@@ -105,8 +103,8 @@ public class Main extends App {
     private boolean showExportWindow = false;
     private final ImBoolean showStyleEditor = new ImBoolean(false);
     private final ImBoolean showAcceleratorEditor = new ImBoolean(false);
-    private final ImBoolean showGraphicsSettings = new ImBoolean(false);
-    private final ImBoolean showHelpWindow = new ImBoolean(false);
+    private final ImBoolean showSettings = new ImBoolean(false);
+    private final ImBoolean showShortcutsWindow = new ImBoolean(false);
     private final ImBoolean showAboutWindow = new ImBoolean(false);
 
     // GUI: store data on the current state of the GUI
@@ -246,14 +244,10 @@ public class Main extends App {
         }
         ImGui.render();
 
-        renderTimer.in();
-
         setParticleShaderUniforms();
         if (!traces || !tracesBefore) renderer.clear();
         tracesBefore = traces;
         renderer.run(ImGui.getDrawData(), width, height);
-
-        renderTimer.out();
     }
 
     private void buildGui() {
@@ -276,15 +270,12 @@ public class Main extends App {
 
                 ImGui.pushItemWidth(200);
 
-                ImGui.text("Info");
                 {
                     statsFormatter.start();
                     statsFormatter.put("Graphics FPS", String.format("%.0f", renderClock.getAvgFramerate()));
                     statsFormatter.put("Physics FPS", loop.getAvgFramerate() < 100000 ? String.format("%.0f", loop.getAvgFramerate()) : "inf");
-                    statsFormatter.put("Physics vs. Graphics", loop.getAvgFramerate() < 100000 ? String.format("%.2f", loop.getAvgFramerate() / renderClock.getAvgFramerate()) : "inf");
                     if (advancedGui) {
-                        statsFormatter.put("Graphics FPS Standard Deviation", String.format("%.2f", renderClock.getStandardDeviation()));
-                        statsFormatter.put("debug", String.format("%.1f ms", debugTimer.getAvgDtMillis()));
+                        statsFormatter.put("Physics vs. Graphics", loop.getAvgFramerate() < 100000 ? String.format("%.2f", loop.getAvgFramerate() / renderClock.getAvgFramerate()) : "inf");
                     }
                     statsFormatter.end();
                 }
@@ -635,8 +626,8 @@ public class Main extends App {
         ImGui.setNextWindowBgAlpha(guiBackgroundAlpha);
         ImGui.setNextWindowSize(400 * scale, 400 * scale, ImGuiCond.Once);
         ImGui.setNextWindowPos((width - 400 * scale) / 2f, (height - 400 * scale) / 2f, ImGuiCond.Once);
-        if (showGraphicsSettings.get() && showGui.get()) {
-            if (ImGui.begin("Graphics Settings", showGraphicsSettings, ImGuiWindowFlags.None
+        if (showSettings.get() && showGui.get()) {
+            if (ImGui.begin("Settings", showSettings, ImGuiWindowFlags.None
                     | ImGuiWindowFlags.NoResize
                     | ImGuiWindowFlags.NoFocusOnAppearing)) {
 
@@ -724,8 +715,8 @@ public class Main extends App {
             ImGui.showStyleEditor();
         }
 
-        if (showHelpWindow.get()) {
-            if (ImGui.begin("Help", showHelpWindow)) {
+        if (showShortcutsWindow.get()) {
+            if (ImGui.begin("Shortcuts", showShortcutsWindow)) {
                 ImGui.text("""
                         [l]/[L]: change palette
                         [s]/[S]: change shader
@@ -870,16 +861,21 @@ public class Main extends App {
     }
 
     private void buildMainMenu() {
-        if (ImGui.beginMenu("File")) {
-            if (ImGui.menuItem("Import..", "Str+O")) {
-                //todo show file dialog
-                //     importSettings.path = ...
-                showImportWindow = true;
-            }
+        if (ImGui.beginMenu("Main")) {
+            //todo: implement import/export
+//            if (ImGui.menuItem("Import..", "Str+O")) {
+//                //todo show file dialog
+//                //     importSettings.path = ...
+//                showImportWindow = true;
+//            }
+//
+//            if (ImGui.menuItem("Export..", "Str+S")) {
+//                showExportWindow = true;
+//                setInitialExportSettings();
+//            }
 
-            if (ImGui.menuItem("Export..", "Str+S")) {
-                showExportWindow = true;
-                setInitialExportSettings();
+            if (ImGui.menuItem("Settings..")) {
+                showSettings.set(true);
             }
 
             if (ImGui.menuItem("Quit", "Alt+F4")) {
@@ -917,10 +913,6 @@ public class Main extends App {
                 showGui.set(false);
             }
 
-            if (ImGui.menuItem("Graphics Settings..")) {
-                showGraphicsSettings.set(true);
-            }
-
             if (ImGui.menuItem("Advanced GUI", "a", advancedGui)) {
                 advancedGui ^= true;
             }
@@ -930,11 +922,11 @@ public class Main extends App {
 
         if (ImGui.beginMenu("Help")) {
 
-            if (ImGui.menuItem("Help")) {
-                showHelpWindow.set(true);
+            if (ImGui.menuItem("Shortcuts..")) {
+                showShortcutsWindow.set(true);
             }
 
-            if (ImGui.menuItem("About")) {
+            if (ImGui.menuItem("About..")) {
                 showAboutWindow.set(true);
             }
 

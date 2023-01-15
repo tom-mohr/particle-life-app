@@ -66,16 +66,12 @@ public abstract class App {
             pmouseX = mouseX;
             pmouseY = mouseY;
 
-            Main.debugTimer.in();
-
             glfwPollEvents();
             imGuiLayer.processEvents();
 
             double dt = guiClock.getDtMillis() / 1000.0;
             imGuiLayer.setIO((float) dt, width, height);
             draw(dt);
-
-            Main.debugTimer.out();
 
             glfwSwapBuffers(window); // swap the color buffers
         }
