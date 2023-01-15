@@ -1,8 +1,8 @@
 package com.particle_life.app;
 
+import com.particle_life.LoadDistributor;
 import com.particle_life.Particle;
 import com.particle_life.PhysicsSettings;
-import com.particle_life.ThreadUtility;
 
 class PhysicsSnapshot {
 
@@ -21,9 +21,9 @@ class PhysicsSnapshot {
      */
     long snapshotTime;
 
-    void take(ExtendedPhysics p) {
+    void take(ExtendedPhysics p, LoadDistributor loadDistributor) {
 
-        write(p.particles);
+        write(p.particles, loadDistributor);
 
         settings = p.settings.deepCopy();
 
@@ -33,7 +33,7 @@ class PhysicsSnapshot {
         snapshotTime = System.currentTimeMillis();
     }
 
-    private void write(Particle[] particles) {
+    private void write(Particle[] particles, LoadDistributor loadDistributor) {
 
         //todo: only write types if necessary!
 
@@ -45,7 +45,7 @@ class PhysicsSnapshot {
             types = new int[n];
         }
 
-        ThreadUtility.distributeLoadEvenly(n, PREFERRED_NUMBER_OF_THREADS, i -> {
+        loadDistributor.distributeLoadEvenly(n, PREFERRED_NUMBER_OF_THREADS, i -> {
             Particle p = particles[i];
 
             final int i3 = 3 * i;

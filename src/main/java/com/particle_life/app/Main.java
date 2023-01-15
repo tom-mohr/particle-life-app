@@ -60,6 +60,7 @@ public class Main extends App {
     private boolean autoDt = true;
     private double fallbackDt = 0.02;
     private PhysicsSnapshot physicsSnapshot;
+    private LoadDistributor physicsSnapshotLoadDistributor = new LoadDistributor();  // speed up taking snapshots with parallelization
     public AtomicBoolean newSnapshotAvailable = new AtomicBoolean(false);
 
     // local copy of snapshot:
@@ -148,7 +149,7 @@ public class Main extends App {
                 matrixGenerators.getActive().object,
                 typeSetters.getActive().object);
         physicsSnapshot = new PhysicsSnapshot();
-        physicsSnapshot.take(physics);
+        physicsSnapshot.take(physics, physicsSnapshotLoadDistributor);
         newSnapshotAvailable.set(true);
 
         loop = new Loop();
@@ -162,6 +163,8 @@ public class Main extends App {
     protected void beforeClose() {
         try {
             loop.stop(1000);
+            physics.shutdown(1000);
+            physicsSnapshotLoadDistributor.shutdown(1000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -221,7 +224,7 @@ public class Main extends App {
         }
 
         loop.doOnce(() -> {
-            physicsSnapshot.take(physics);
+            physicsSnapshot.take(physics, physicsSnapshotLoadDistributor);
             newSnapshotAvailable.set(true);
         });
 
@@ -600,6 +603,7 @@ public class Main extends App {
 
                 try {
                     if (loop.stop(1000)) {
+                        physics.shutdown(1000);
                         createPhysics();
                     } else {
                         ImGui.openPopup("Taking too long");
