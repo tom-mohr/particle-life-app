@@ -44,7 +44,7 @@ task zipApp (type: Zip) {
     dependsOn tasks.assembleApp
     from layout.buildDirectory.dir("app")
     destinationDirectory = layout.buildDirectory.dir("zipApp")
-    archiveName "particle-life-app.zip"
+    archiveFileName = "particle-life-app.zip"
 }
 
 group 'com.particle.life.app'
