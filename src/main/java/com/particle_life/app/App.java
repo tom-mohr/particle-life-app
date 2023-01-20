@@ -175,6 +175,10 @@ public abstract class App {
                         case GLFW_KEY_RIGHT -> "RIGHT";
                         case GLFW_KEY_UP -> "UP";
                         case GLFW_KEY_DOWN -> "DOWN";
+                        case GLFW_KEY_LEFT_SHIFT -> "LEFT_SHIFT";
+                        case GLFW_KEY_RIGHT_SHIFT -> "RIGHT_SHIFT";
+                        case GLFW_KEY_LEFT_CONTROL -> "LEFT_CONTROL";
+                        case GLFW_KEY_RIGHT_CONTROL -> "RIGHT_CONTROL";
                         default -> null;
                     };
                 }
