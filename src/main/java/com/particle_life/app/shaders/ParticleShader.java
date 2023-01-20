@@ -36,7 +36,7 @@ public class ParticleShader {
 
     public ParticleShader(String vertexShaderResource, String geometryShaderResource, String fragmentShaderResource) {
 
-        shaderProgram = loadShaders(vertexShaderResource, geometryShaderResource, fragmentShaderResource);
+        shaderProgram = ShaderUtil.makeShaderProgram(vertexShaderResource, geometryShaderResource, fragmentShaderResource);
 
         // GET LOCATIONS
         timeUniformLocation = glGetUniformLocation(shaderProgram, "time");
@@ -48,54 +48,6 @@ public class ParticleShader {
         xAttribLocation = glGetAttribLocation(shaderProgram, "x");
         vAttribLocation = glGetAttribLocation(shaderProgram, "v");
         typeAttribLocation = glGetAttribLocation(shaderProgram, "type");
-    }
-
-    private int loadShaders(String vertexShaderResource, String geometryShaderResource, String fragmentShaderResource) {
-
-        String vertSrc = ResourceAccess.readTextFile(vertexShaderResource);
-        String geomSrc = ResourceAccess.readTextFile(geometryShaderResource);
-        String fragSrc = ResourceAccess.readTextFile(fragmentShaderResource);
-
-        int vertShaderObject = glCreateShader(GL_VERTEX_SHADER);
-        int geomShaderObject = glCreateShader(GL_GEOMETRY_SHADER);
-        int fragShaderObject = glCreateShader(GL_FRAGMENT_SHADER);
-        glShaderSource(vertShaderObject, vertSrc);
-        glShaderSource(geomShaderObject, geomSrc);
-        glShaderSource(fragShaderObject, fragSrc);
-        glCompileShader(vertShaderObject);
-        glCompileShader(geomShaderObject);
-        glCompileShader(fragShaderObject);
-
-        //todo: check for compilation errors
-        printShaderErrors(vertShaderObject, "vertex");
-        printShaderErrors(geomShaderObject, "geometry");
-        printShaderErrors(fragShaderObject, "fragment");
-
-        int program = glCreateProgram();
-        glAttachShader(program, vertShaderObject);
-        glAttachShader(program, geomShaderObject);
-        glAttachShader(program, fragShaderObject);
-
-        glLinkProgram(program);
-        return program;
-    }
-
-    private void printShaderErrors(int shader, String shaderName) {
-
-        int[] params = new int[10];
-        glGetShaderiv(shader, GL_COMPILE_STATUS, params);
-        int isCompiled = params[0];
-        if (isCompiled == GL_FALSE) {
-            System.err.printf("Error while compiling %s shader. Info log:%n", shaderName);
-
-            glGetShaderiv(shader, GL_INFO_LOG_LENGTH, params);
-            int maxLength = params[0];
-
-            String infoLog = glGetShaderInfoLog(shader, maxLength);
-
-            System.err.println(infoLog);
-
-        }
     }
 
     /**
