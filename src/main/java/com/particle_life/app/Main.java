@@ -295,6 +295,7 @@ public class Main extends App {
                     statsFormatter.put("Physics FPS", loop.getAvgFramerate() < 100000 ? String.format("%.0f", loop.getAvgFramerate()) : "inf");
                     if (advancedGui) {
                         statsFormatter.put("Physics vs. Graphics", loop.getAvgFramerate() < 100000 ? String.format("%.2f", loop.getAvgFramerate() / renderClock.getAvgFramerate()) : "inf");
+                        statsFormatter.put("Particles in Cursor", String.valueOf(cursors.getActive().object.getSelection(physics).size()));
                     }
                     statsFormatter.end();
                 }
