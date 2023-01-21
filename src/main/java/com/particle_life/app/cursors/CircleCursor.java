@@ -2,6 +2,7 @@ package com.particle_life.app.cursors;
 
 import com.particle_life.Particle;
 import com.particle_life.Physics;
+import org.joml.Vector3d;
 
 import static org.lwjgl.opengl.GL11.*;
 
@@ -23,5 +24,13 @@ public class CircleCursor extends Cursor {
                     position.y + size * Math.sin(angle));
         }
         glEnd();
+    }
+
+    @Override
+    public Vector3d sampleRandomPoint() {
+        double angle = Math.random() * 2 * Math.PI;
+        return new Vector3d(Math.cos(angle), Math.sin(angle), 0)
+                .mul(Math.sqrt(Math.random()) * size)
+                .add(position);
     }
 }

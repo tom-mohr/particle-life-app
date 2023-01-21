@@ -22,4 +22,11 @@ public class SquareCursor extends Cursor {
         glVertex2d(position.x - size, position.y + size);
         glEnd();
     }
+
+    @Override
+    public Vector3d sampleRandomPoint() {
+        return new Vector3d(2 * Math.random() - 1, 2 * Math.random() - 1, 0)
+                .mul(size)
+                .add(position);
+    }
 }

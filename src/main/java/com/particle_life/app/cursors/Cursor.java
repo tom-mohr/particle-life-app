@@ -2,6 +2,7 @@ package com.particle_life.app.cursors;
 
 import com.particle_life.Particle;
 import com.particle_life.Physics;
+import org.joml.Vector2d;
 import org.joml.Vector3d;
 
 import java.lang.reflect.InvocationTargetException;
@@ -47,6 +48,8 @@ public abstract class Cursor {
     }
 
     public abstract void draw();
+
+    public abstract Vector3d sampleRandomPoint();
 
     public Cursor copy() {
         Cursor c = makeNewInstance();

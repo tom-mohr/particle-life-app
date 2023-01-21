@@ -5,6 +5,8 @@ import com.particle_life.app.color.Color;
 import com.particle_life.app.color.Palette;
 import com.particle_life.app.color.PalettesProvider;
 import com.particle_life.app.cursors.Cursor;
+import com.particle_life.app.cursors.CursorAction;
+import com.particle_life.app.cursors.CursorActionProvider;
 import com.particle_life.app.cursors.CursorProvider;
 import com.particle_life.app.selection.InfoWrapper;
 import com.particle_life.app.selection.SelectionManager;
@@ -49,6 +51,7 @@ public class Main extends App {
     private final SelectionManager<PositionSetter> positionSetters = new SelectionManager<>();
     private final SelectionManager<TypeSetter> typeSetters = new SelectionManager<>();
     private final SelectionManager<Cursor> cursors = new SelectionManager<>();
+    private final SelectionManager<CursorAction> cursorActions = new SelectionManager<>();
 
     // helper classes
     private final ImGuiStatsFormatter statsFormatter = new ImGuiStatsFormatter();
@@ -68,6 +71,7 @@ public class Main extends App {
     private PhysicsSettings settings;
     private int particleCount;
     private int preferredNumberOfThreads;
+    private int cursorParticleCount = 0;
 
     // particle rendering: constants
     private double zoomStepFactor = 1.2;
@@ -94,6 +98,7 @@ public class Main extends App {
     boolean leftControlPressed = false;
     boolean rightControlPressed = false;
     private double cursorSize = 0.1;
+    private int brushPower = 100;
 
     // GUI: style
     private float guiBackgroundAlpha = 1.0f;
@@ -135,6 +140,7 @@ public class Main extends App {
         matrixGenerators.addAll(new MatrixGeneratorProvider().create());
         typeSetters.addAll(new TypeSetterProvider().create());
         cursors.addAll(new CursorProvider().create());
+        cursorActions.addAll(new CursorActionProvider().create());
 
         createPhysics();
 
@@ -211,17 +217,55 @@ public class Main extends App {
         zoom = MathUtils.lerp(zoom, zoomGoal, zoomSmoothness);
 
         if (draggingParticles) {
-            final Vector3d wPrev = coordinates.world(pmouseX, pmouseY);  // where the dragging started
-            final Vector3d wNew = coordinates.world(mouseX, mouseY);  // where the dragging ended
-            final Vector3d delta = wNew.sub(wPrev);  // dragged distance
+
             final Cursor cursorCopy = cursors.getActive().object.copy();  // need to copy for async access in loop.enqueue()
-            cursorCopy.setPosition(wPrev.x, wPrev.y);  // set cursor to start of dragging
-            loop.enqueue(() -> {
-                for (Particle p : cursorCopy.getSelection(physics)) {
-                    p.position.add(delta);
-                    physics.ensurePosition(p.position);  // wrap or clamp
-                }
-            });
+            // execute cursor action
+            switch (cursorActions.getActive().object) {
+                case MOVE:
+                    final Vector3d wPrev = coordinates.world(pmouseX, pmouseY);  // where the dragging started
+                    final Vector3d wNew = coordinates.world(mouseX, mouseY);  // where the dragging ended
+                    final Vector3d delta = wNew.sub(wPrev);  // dragged distance
+                    cursorCopy.setPosition(wPrev.x, wPrev.y);  // set cursor to start of dragging
+                    loop.enqueue(() -> {
+                        for (Particle p : cursorCopy.getSelection(physics)) {
+                            p.position.add(delta);
+                            physics.ensurePosition(p.position);  // wrap or clamp
+                        }
+                    });
+                    break;
+                case BRUSH:
+                    final int addCount = brushPower;
+                    loop.enqueue(() -> {
+                        int prevLength = physics.particles.length;
+                        physics.particles = Arrays.copyOf(physics.particles, prevLength + addCount);
+                        for (int i = 0; i < addCount; i++) {
+                            Particle particle = new Particle();
+                            particle.position.set(cursorCopy.sampleRandomPoint());
+                            physics.ensurePosition(particle.position);
+                            particle.type = physics.typeSetter.getType(
+                                    particle.position,
+                                    particle.velocity,
+                                    particle.type,
+                                    physics.settings.matrix.size()
+                            );
+                            physics.particles[prevLength + i] = particle;
+                        }
+                    });
+                    break;
+                case DELETE:
+                    loop.enqueue(() -> {
+                        Particle[] newParticles = new Particle[physics.particles.length];
+                        int j = 0;
+                        for (Particle particle : physics.particles) {
+                            if (!cursorCopy.isInside(physics, particle)) {
+                                newParticles[j] = particle;
+                                j++;
+                            }
+                        }
+                        physics.particles = Arrays.copyOf(newParticles, j);  // cut to correct length
+                    });
+                    break;
+            }
         }
 
         renderer.particleShader = shaders.getActive().object;  // need to assign a shader before buffering particle data
@@ -235,6 +279,7 @@ public class Main extends App {
             settings = physicsSnapshot.settings.deepCopy();
             particleCount = physicsSnapshot.particleCount;
             preferredNumberOfThreads = physics.preferredNumberOfThreads;
+            // todo: make this in a clean async way: cursorParticleCount = cursors.getActive().object.getSelection(physics).size();
 
             newSnapshotAvailable.set(false);
         }
@@ -295,7 +340,7 @@ public class Main extends App {
                     statsFormatter.put("Physics FPS", loop.getAvgFramerate() < 100000 ? String.format("%.0f", loop.getAvgFramerate()) : "inf");
                     if (advancedGui) {
                         statsFormatter.put("Physics vs. Graphics", loop.getAvgFramerate() < 100000 ? String.format("%.2f", loop.getAvgFramerate() / renderClock.getAvgFramerate()) : "inf");
-                        statsFormatter.put("Particles in Cursor", String.valueOf(cursors.getActive().object.getSelection(physics).size()));
+                        //todo display when functional: statsFormatter.put("Particles in Cursor", String.valueOf(cursorParticleCount));
                     }
                     statsFormatter.end();
                 }
@@ -528,20 +573,28 @@ public class Main extends App {
                     // CURSOR
                     if (advancedGui) {
                         ImGui.text("Cursor");
+                        renderCombo("##cursoraction", cursorActions);
                         renderCombo("##cursor", cursors);
                         ImGui.sameLine();
                         if (ImGui.checkbox("show", renderer.drawCursor)) {
                             renderer.drawCursor ^= true;
                         }
                         // cursor size slider
-                        float displayValue = (float) cursorSize;
-                        float[] cursorSizeSliderValue = new float[]{displayValue};
+                        float[] cursorSizeSliderValue = new float[]{(float) cursorSize};
                         if (ImGui.sliderFloat("cursor size", cursorSizeSliderValue,
                                 0.001f, 1.000f,
-                                String.format("%.3f", displayValue),
+                                String.format("%.3f", cursorSize),
                                 ImGuiSliderFlags.Logarithmic)) {
                             cursorSize = cursorSizeSliderValue[0];
                         }
+                        if (cursorActions.getActive().object == CursorAction.BRUSH) {
+                            // brush power slider
+                            int[] brushPowerSliderValue = new int[]{brushPower};
+                            if (ImGui.sliderInt("brush power", brushPowerSliderValue, 1, 100)) {
+                                brushPower = brushPowerSliderValue[0];
+                            }
+                        }
+
                     }
                 }
 
