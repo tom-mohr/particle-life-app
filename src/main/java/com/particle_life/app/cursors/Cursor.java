@@ -38,7 +38,7 @@ public abstract class Cursor {
 
     public abstract boolean isInside(Physics physics, Particle particle);
 
-    public Iterable<Particle> getSelection(Physics physics) {
+    public List<Particle> getSelection(Physics physics) {
         List<Particle> selectedParticles = new ArrayList<>();
         for (Particle particle : physics.particles) {
             if (isInside(physics, particle)) selectedParticles.add(particle);
