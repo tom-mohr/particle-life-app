@@ -1,15 +1,17 @@
 # Maintainer: Your Name <youremail@domain.com>
 pkgname="particle-life"
-pkgver=0.0.3
+pkgver=0.0.4
 pkgrel=1
+_java_ver=19
+_pkgver=${_java_ver}.0.1+11
 pkgdesc="GUI for Particle Life, a particle system showing life-like behaviour"
 arch=("x86_64")
 url="https://github.com/altruios/particle-life-app"
 license=('GPL')
 depends=('java-environment')
+makedepends=('git' 'java-environment>=11')
 source=("$pkgname.tar.gz::https://github.com/altruios/$pkgname-app/archive/refs/tags/$pkgver.tar.gz")
 md5sums=('SKIP')
-
 
 build() {
 	echo "$pkgname-app-$pkgver"
@@ -20,7 +22,9 @@ build() {
 
 #move stuff to places it should be in linux
 package() {
-	cd "$pkgname-app-$pkgver"
-    install -Dm755 "/build/libs$pkgname-app-$pkgver-1.0.0-all.jar" "$pkgdir/usr/bin/$pkgname"
-    install -Dm644 ./README.md "$pkgdir/usr/share/doc/$pkgname"
+    cd "$pkgname-app-$pkgver"
+    install -Dm644 "$pkgdir/build/libs/*.jar" "$pkgdir/usr/share/java/${pkgname}/${pkgname}.jar"
+
+    install -Dm755 "$pkgname.sh" "$pkgdir/usr/bin/${pkgname}"
+
 }
