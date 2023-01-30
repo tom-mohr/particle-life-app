@@ -1,6 +1,6 @@
 # Maintainer: Your Name <youremail@domain.com>
 pkgname="particle-life"
-pkgver=0.0.5
+pkgver=0.0.6
 pkgrel=1
 _java_ver=19
 _pkgver=${_java_ver}.0.1+11
