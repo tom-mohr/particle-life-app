@@ -1,6 +1,6 @@
 # Maintainer: Your Name <youremail@domain.com>
 pkgname="particle-life"
-pkgver=0.0.1
+pkgver=0.0.7
 pkgrel=1
 _java_ver=19
 _pkgver=${_java_ver}.0.1+11
@@ -24,6 +24,6 @@ build() {
 package() {
     cd "$pkgname-app-$pkgver"
     install -Dm755 "$srcdir/$pkgname-app-$pkgver/build/libs/$pkgname-app-$pkgver-1.0.0-all.jar" "$pkgdir/usr/share/java/${pkgname}/${pkgname}.jar"
-    install -Dm755 "$pkgname.sh" "$pkgdir/usr/bin/${pkgname}"
+    install -Dm755 "$srcdir/$pkgname-app-$pkgver/$pkgname.sh" "$pkgdir/usr/bin/${pkgname}"
 
 }
