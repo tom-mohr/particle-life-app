@@ -18,5 +18,5 @@ build() {
 package() {
     cd "$pkgname-app-$pkgver"
     install -Dm755 "$srcdir/$pkgname-app-$pkgver/build/libs/$pkgname-app-$pkgver-1.0.0-all.jar" "$pkgdir/usr/share/java/${pkgname}/${pkgname}.jar"
-    install -Dm755 "$srcdir/$pkgname-app-$pkgver/$pkgname.sh" "$pkgdir/usr/bin/${pkgname}"
+    install -Dm755 "$srcdir/$pkgname-app-$pkgver/_patch.sh" "$pkgdir/usr/bin/${pkgname}"
 }
