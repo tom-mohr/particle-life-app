@@ -1,22 +1,30 @@
 # Maintainer: Your Name <youremail@domain.com>
-pkgname="particle-life"
+pkgname="particle-life-app"
 pkgrel=1
-pkgver=v1.1.3 # todo: make automatic
+pkgver=1
 pkgdesc="GUI for Particle Life, a particle system showing life-like behaviour"
 arch=("x86_64")
-url="https://github.com/tom-mohr/particle-life-app"
+url="https://github.com/tom-mohr/$pkgname"
 license=('GPL')
 depends=('java-environment')
-makedepends=('git' 'java-environment>=16')
-source=("$pkgname.tar.gz::$url/archive/refs/tags/$pkgver.tar.gz")
+makedepends=('git' 'java-environment>=11')
+source=("git+$url.git")
 md5sums=('SKIP')
+pkgver() {
+	cd "$srcdir/$pkgname"
+    git describe --long | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
+
+}
 build() {
-	cd "$pkgname-app-$pkgver"
-    chmod +x ./gradlew
-    ./gradlew shadowJar
+	cd "$srcdir/$pkgname"
+    chmod +x ./gradlew #make gradlew an executable
+    ./gradlew shadowJar #shadowJar wraps jar with libraries
 }
 package() {
-    cd "$pkgname-app-$pkgver"
-    install -Dm755 "$srcdir/$pkgname-app-$pkgver/build/libs/$pkgname-app-$pkgver-1.0.0-all.jar" "$pkgdir/usr/share/java/${pkgname}/${pkgname}.jar"
-    install -Dm755 "$srcdir/$pkgname-app-$pkgver/_patch.sh" "$pkgdir/usr/bin/${pkgname}"
+    cd "$pkgname-$pkgver"
+    #copy jar executable to main java location
+    #possible error in file name
+    install -Dm755 "$srcdir/$pkgname/build/libs/$pkgname-1.0.0-all.jar" "$pkgdir/usr/share/java/${pkgname}/${pkgname}.jar"
+    #copy and rename _patch to the package name
+    install -Dm755 "$srcdir/$pkgname/_patch.sh" "$pkgdir/usr/bin/${pkgname}"
 }
