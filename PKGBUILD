@@ -26,4 +26,5 @@ package() {
     install -Dm755 "$srcdir/$pkgname/build/libs/$pkgname-1.0.0-all.jar" "$pkgdir/usr/share/java/${pkgname}/${pkgname}.jar"
     install -Dm755 "$srcdir/$pkgname/_patch.sh" "$pkgdir/usr/bin/${pkgname}"
     install -Dm755 "$srcdir/$pkgname/README.md" "$pkgdir/usr/share/doc/${pkgname}"
+    install -Dm755 "$srcdir/$pkgname/LICENSE.md" "$pkgdir/usr/share/licenses/${pkgname}"
 }
