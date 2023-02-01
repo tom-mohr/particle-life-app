@@ -1,5 +1,5 @@
 # Maintainer: Tom Mohr <particle.life.app@gmail.com> 
-# Maintainer: Altruios <altruios.phasma@gmail.com>
+# Contributor: Altruios <altruios.phasma@gmail.com>
 # Contributor: SuperRyn <therunningcat-SuperRyn@protonmail.com> 
 pkgname="particle-life-app"
 pkgrel=1
