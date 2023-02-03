@@ -17,7 +17,6 @@ import imgui.flag.ImGuiCond;
 import imgui.flag.ImGuiInputTextFlags;
 import imgui.flag.ImGuiSliderFlags;
 import imgui.flag.ImGuiWindowFlags;
-import imgui.internal.flag.ImGuiItemFlags;
 import imgui.type.ImBoolean;
 import imgui.type.ImFloat;
 import imgui.type.ImInt;
@@ -154,6 +153,8 @@ public class Main extends App {
         glEnable(GL_MULTISAMPLE);
 
         renderer.init();
+
+        ImGuiUtils.setImGuiStyle();
     }
 
     private void createPhysics() {
