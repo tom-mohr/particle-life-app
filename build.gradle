@@ -91,7 +91,7 @@ repositories {
 
 dependencies {
 
-    implementation "com.github.tom-mohr:particle-life:v0.1.1"
+    implementation "com.github.tom-mohr:particle-life:v0.2.0"
 
     // jOOR
     implementation 'org.jooq:joor:0.9.14'

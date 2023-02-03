@@ -511,13 +511,17 @@ public class Main extends App {
                     }
 
                     {// FRICTION
-                        double secondPart = 10.0;
-                        double frictionVal = Math.pow(settings.friction, 1.0 / secondPart);
-                        float[] frictionSliderValue = new float[]{(float) frictionVal};
-                        if (ImGui.sliderFloat("friction", frictionSliderValue, 0.0f, 1.0f, String.format("%.3f / %.1fs", frictionVal, 1.0 / secondPart))) {
-                            final double newFriction = Math.pow(frictionSliderValue[0], secondPart);
-                            loop.enqueue(() -> physics.settings.friction = newFriction);
+                        float[] frictionSliderValue = new float[]{(float) settings.velocityHalfLife};
+                        if (ImGui.sliderFloat("velocity half life",
+                                frictionSliderValue, 0.0f, 1.0f,
+                                String.format("%4.0f ms", settings.velocityHalfLife * 1000),
+                                ImGuiSliderFlags.Logarithmic)) {
+                            final double newVelocityHalfLife = frictionSliderValue[0];
+                            loop.enqueue(() -> physics.settings.velocityHalfLife = newVelocityHalfLife);
                         }
+                        ImGui.sameLine();
+                        ImGuiUtils.helpMarker("(i)",
+                                "The time after which half the velocity of a particle should be lost due to friction.");
                     }
 
                     float[] forceFactorSliderValue = new float[]{(float) settings.force};
