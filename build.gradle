@@ -9,6 +9,12 @@ plugins {
 
 }
 
+application {
+    if (OperatingSystem.current() == OperatingSystem.MAC_OS) {
+        applicationDefaultJvmArgs = ["-XstartOnFirstThread"]
+    }
+}
+
 launch4j {
     icon = "${projectDir}/favicon.ico"
     mainClassName = 'com.particle_life.app.Main'
