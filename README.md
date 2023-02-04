@@ -14,7 +14,7 @@ Join the [Discord server](https://discord.gg/Fd64AhKzMD)!
 If you just want to try out this application, simply download the executables from [particle-life.com](https://particle-life.com).
 However, if you want to contribute to this repository or just mess with the code, you need to build the application from source.
 
-For this, you need to have [Git](https://git-scm.com/downloads) and [Java](https://jdk.java.net/19/) with version 16 or higher installed on your computer. Confirm your Java version with `java --version`.
+For this, you need to have [Git](https://git-scm.com/downloads) and [Java](https://jdk.java.net/19/) with version 16 or higher installed on your computer. Confirm your Java version with `java -version`.
 
 Then, execute these lines in the terminal:
 ```sh
