@@ -1,7 +1,8 @@
 #version 410
 
 in vec4 fColor;
+out vec4 color;
 
 void main (void) {
-    gl_FragColor = fColor;
+    color = fColor;
 }

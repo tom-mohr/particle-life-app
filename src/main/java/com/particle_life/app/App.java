@@ -104,6 +104,12 @@ public abstract class App {
         glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE); // the window will be resizable
         glfwWindowHint(GLFW_SAMPLES, 16);
 
+        // request OpenGL version 4.1 (corresponds to "#version 410" in shaders)
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+
         // Create the window
         long monitor = glfwGetPrimaryMonitor();
         GLFWVidMode videoMode = glfwGetVideoMode(monitor);
