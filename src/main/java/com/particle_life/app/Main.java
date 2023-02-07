@@ -365,7 +365,7 @@ public class Main extends App {
                         // NTYPES
                         ImInt matrixSizeInput = new ImInt(settings.matrix.size());
                         if (ImGui.inputInt("types", matrixSizeInput, 1, 1, ImGuiInputTextFlags.EnterReturnsTrue)) {
-                            final int newSize = Math.max(1, matrixSizeInput.get());
+                            final int newSize = Math.max(1, Math.min(matrixSizeInput.get(), 256));
                             loop.enqueue(() -> physics.setMatrixSize(newSize));
                         }
 
