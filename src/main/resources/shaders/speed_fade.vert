@@ -2,7 +2,7 @@
 
 #define FACTOR 10
 
-uniform vec4 palette[64];
+uniform vec4 palette[256];
 uniform float time = 0.0;
 uniform mat4 transform;
 

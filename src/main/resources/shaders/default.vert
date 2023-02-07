@@ -1,6 +1,6 @@
 #version 410
 
-uniform vec4 palette[64];
+uniform vec4 palette[256];
 uniform float time;
 uniform mat4 transform;
 

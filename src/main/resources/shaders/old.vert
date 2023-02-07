@@ -5,7 +5,7 @@
 //layout(location = 1) in int type;
 
 uniform float time = 0.0;
-uniform vec4 palette[64];
+uniform vec4 palette[256];
 uniform int paletteSize;
 
 in int type;
