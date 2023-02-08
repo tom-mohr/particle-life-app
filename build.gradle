@@ -92,7 +92,10 @@ switch (OperatingSystem.current()) {
 repositories {
     mavenCentral()
     mavenLocal()
-    maven { url "https://jitpack.io" }
+    
+    // JitPack allows to easily add dependencies on GitHub repos
+    // (e.g. implementation 'com.github.User:Repo:Tag')
+    maven { url "https://jitpack.io" }  // this line should be at the end of the repositories
 }
 
 dependencies {
