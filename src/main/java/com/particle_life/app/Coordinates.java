@@ -6,6 +6,8 @@ import org.joml.Vector3d;
 
 class Coordinates {
 
+    static final double MAX_ZOOM = 0.1;
+
     double width;
     double height;
     Vector3d shift;
@@ -89,10 +91,15 @@ class Coordinates {
     }
 
     Coordinates zoomInOnMouse(Vector2d mouse, double zoomFactor) {
+        double newZoom = zoom * zoomFactor;
+
+        if (newZoom < MAX_ZOOM) {
+            return this;
+        }
 
         Vector3d w = world(mouse.x, mouse.y);
 
-        zoom *= zoomFactor;
+        zoom = newZoom;
 
         shift.set(new Vector3d(w)
                 .add(shift)

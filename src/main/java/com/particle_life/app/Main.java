@@ -32,7 +32,7 @@ import java.awt.image.DataBufferInt;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicBoolean; 
 
 import static org.lwjgl.opengl.GL11.glEnable;
 import static org.lwjgl.opengl.GL13.GL_MULTISAMPLE;
@@ -1141,7 +1141,7 @@ public class Main extends App {
             case "s" -> selectionStep(shaders, 1);
             case "S" -> selectionStep(shaders, -1);
             case "+" -> zoomGoal *= Math.pow(zoomStepFactor, 2);// more steps than when scrolling
-            case "-" -> zoomGoal /= Math.pow(zoomStepFactor, 2);
+            case "-" -> zoomGoal = ZoomUtils.zoomOut(zoomGoal, zoomStepFactor);
             case "z" -> resetCamera(true);
             case "Z" -> {
                 resetCamera(true);
