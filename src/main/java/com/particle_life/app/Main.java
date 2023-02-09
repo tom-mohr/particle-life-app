@@ -32,7 +32,7 @@ import java.awt.image.DataBufferInt;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicBoolean; 
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.lwjgl.opengl.GL11.glEnable;
 import static org.lwjgl.opengl.GL13.GL_MULTISAMPLE;
