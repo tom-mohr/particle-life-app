@@ -4,14 +4,18 @@ import org.joml.Matrix4d;
 
 import static org.lwjgl.opengl.GL20.*;
 
-public class GuiOverlayShader {
+public class CursorShader {
 
     private final int shaderProgram;
     private final int transformUniformLocation;
     private final float[] transform = new float[16];
 
-    public GuiOverlayShader() {
-        shaderProgram = ShaderUtil.makeShaderProgram("gui_shaders/gui.vert", null, "gui_shaders/gui.frag");
+    public CursorShader() {
+        shaderProgram = ShaderUtil.makeShaderProgram(
+                "cursor_shaders/cursor.vert",
+                null,
+                "cursor_shaders/cursor.frag"
+        );
         transformUniformLocation = glGetUniformLocation(shaderProgram, "transform");
     }
 
