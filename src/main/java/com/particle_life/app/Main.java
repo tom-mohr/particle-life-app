@@ -86,6 +86,7 @@ public class Main extends App {
     private boolean traces = false;
     private final Vector3d shift = new Vector3d(0);
     private final Vector3d shiftGoal = new Vector3d(shift);
+    private final double MIN_ZOOM = 0.1;
     private double zoom = 1;
     private double zoomGoal = zoom;
     boolean draggingShift = false;
@@ -1141,7 +1142,7 @@ public class Main extends App {
             case "s" -> selectionStep(shaders, 1);
             case "S" -> selectionStep(shaders, -1);
             case "+" -> zoomGoal *= Math.pow(zoomStepFactor, 2);// more steps than when scrolling
-            case "-" -> zoomGoal = ZoomUtils.zoomOut(zoomGoal, zoomStepFactor);
+            case "-" -> zoomGoal = Math.max(MIN_ZOOM, zoomGoal / Math.pow(zoomStepFactor, 2));
             case "z" -> resetCamera(true);
             case "Z" -> {
                 resetCamera(true);
@@ -1248,7 +1249,7 @@ public class Main extends App {
             double zoomIncrease = Math.pow(zoomStepFactor, y);
 
             Coordinates c = new Coordinates(width, height, shiftGoal, zoomGoal);  // use "goal" shift and zoom
-            c.zoomInOnMouse(new Vector2d(mouseX, mouseY), zoomIncrease);
+            c.zoomInOnMouse(new Vector2d(mouseX, mouseY), Math.max(MIN_ZOOM, zoomIncrease * zoomGoal), zoomIncrease);
 
             zoomGoal = c.zoom;
             shiftGoal.set(c.shift);
