@@ -2,68 +2,54 @@ package com.particle_life.app.cursors;
 
 import com.particle_life.Particle;
 import com.particle_life.Physics;
-import org.joml.Vector2d;
+import com.particle_life.app.shaders.CursorShader;
+import org.joml.Matrix4d;
 import org.joml.Vector3d;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Cursor for manipulating particles.
- */
-public abstract class Cursor {
+public class Cursor {
 
-    protected Vector3d position = new Vector3d(0, 0, 0);
-    protected double size = 0.1;
+    public Vector3d position = new Vector3d(0, 0, 0);
+    public double size = 0.1;
+    public CursorShape shape;
 
-    public double getSize() {
-        return size;
+    private CursorShader cursorShader;
+
+    public boolean isInside(Particle particle, Physics physics) {
+        if (size == 0.0) return false;
+        return shape.isInside(physics.connection(position, particle.position).div(size));
     }
-
-    public void setSize(double size) {
-        this.size = size;
-    }
-
-    public void setPosition(double x, double y) {
-        position.set(x, y, 0);
-    }
-
-    public double x() {
-        return position.x;
-    }
-
-    public double y() {
-        return position.y;
-    }
-
-    public abstract boolean isInside(Physics physics, Particle particle);
 
     public List<Particle> getSelection(Physics physics) {
         List<Particle> selectedParticles = new ArrayList<>();
         for (Particle particle : physics.particles) {
-            if (isInside(physics, particle)) selectedParticles.add(particle);
+            if (isInside(particle, physics)) selectedParticles.add(particle);
         }
         return selectedParticles;
     }
 
-    public abstract void draw();
-
-    public abstract Vector3d sampleRandomPoint();
-
-    public Cursor copy() {
-        Cursor c = makeNewInstance();
-        c.position.set(position);
-        c.size = size;
-        return c;
+    public void draw(Matrix4d transform) {
+        if (cursorShader == null) cursorShader = new CursorShader();  // lazy load shader
+        cursorShader.use();
+        cursorShader.setTransform(transform
+                .translate(position)
+                .scale(size)
+        );
+        if (!shape.isInitialized()) shape.initialize();  // lazy initialize shapes (register VBOs etc. for drawing)
+        shape.draw();
     }
 
-    private Cursor makeNewInstance() {
-        try {
-            // assume this has a default constructor that takes no arguments
-            return (Cursor) this.getClass().getConstructors()[0].newInstance();
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-            throw new RuntimeException(e);
-        }
+    public Vector3d sampleRandomPoint() {
+        return shape.sampleRandomPoint().mul(size).add(position);
+    }
+
+    public Cursor copy() {
+        Cursor c = new Cursor();
+        c.position.set(position);
+        c.size = size;
+        c.shape = shape.copy();
+        return c;
     }
 }

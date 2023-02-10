@@ -4,10 +4,7 @@ import com.particle_life.*;
 import com.particle_life.app.color.Color;
 import com.particle_life.app.color.Palette;
 import com.particle_life.app.color.PalettesProvider;
-import com.particle_life.app.cursors.Cursor;
-import com.particle_life.app.cursors.CursorAction;
-import com.particle_life.app.cursors.CursorActionProvider;
-import com.particle_life.app.cursors.CursorProvider;
+import com.particle_life.app.cursors.*;
 import com.particle_life.app.selection.InfoWrapper;
 import com.particle_life.app.selection.SelectionManager;
 import com.particle_life.app.shaders.ParticleShader;
@@ -17,7 +14,6 @@ import imgui.flag.ImGuiCond;
 import imgui.flag.ImGuiInputTextFlags;
 import imgui.flag.ImGuiSliderFlags;
 import imgui.flag.ImGuiWindowFlags;
-import imgui.internal.flag.ImGuiItemFlags;
 import imgui.type.ImBoolean;
 import imgui.type.ImFloat;
 import imgui.type.ImInt;
@@ -51,7 +47,8 @@ public class Main extends App {
     private final SelectionManager<MatrixGenerator> matrixGenerators = new SelectionManager<>();
     private final SelectionManager<PositionSetter> positionSetters = new SelectionManager<>();
     private final SelectionManager<TypeSetter> typeSetters = new SelectionManager<>();
-    private final SelectionManager<Cursor> cursors = new SelectionManager<>();
+    private Cursor cursor;
+    private final SelectionManager<CursorShape> cursorShapes = new SelectionManager<>();
     private final SelectionManager<CursorAction> cursorActions = new SelectionManager<>();
 
     // helper classes
@@ -99,7 +96,6 @@ public class Main extends App {
     boolean rightShiftPressed = false;
     boolean leftControlPressed = false;
     boolean rightControlPressed = false;
-    private double cursorSize = 0.1;
     private int brushPower = 100;
 
     // GUI: style
@@ -141,7 +137,7 @@ public class Main extends App {
         positionSetters.addAll(new PositionSetterProvider().create());
         matrixGenerators.addAll(new MatrixGeneratorProvider().create());
         typeSetters.addAll(new TypeSetterProvider().create());
-        cursors.addAll(new CursorProvider().create());
+        cursorShapes.addAll(new CursorProvider().create());
         cursorActions.addAll(new CursorActionProvider().create());
 
         createPhysics();
@@ -155,6 +151,10 @@ public class Main extends App {
         glEnable(GL_MULTISAMPLE);
 
         renderer.init();
+
+        // cursor object must be created after renderer.init()
+        cursor = new Cursor();
+        cursor.shape = cursorShapes.getActive().object;  // set initial cursor shape (would be null otherwise)
     }
 
     private void createPhysics() {
@@ -196,9 +196,7 @@ public class Main extends App {
 
         // set cursor position and size
         Vector3d cursorWorldCoordinates = coordinates.world(mouseX, mouseY);
-        Cursor cursor = cursors.getActive().object;
-        cursor.setPosition(cursorWorldCoordinates.x, cursorWorldCoordinates.y);
-        cursor.setSize(cursorSize);
+        cursor.position.set(cursorWorldCoordinates);
 
         if (draggingShift) {
 
@@ -220,14 +218,14 @@ public class Main extends App {
 
         if (draggingParticles) {
 
-            final Cursor cursorCopy = cursors.getActive().object.copy();  // need to copy for async access in loop.enqueue()
+            final Cursor cursorCopy = cursor.copy();  // need to copy for async access in loop.enqueue()
             // execute cursor action
             switch (cursorActions.getActive().object) {
                 case MOVE:
                     final Vector3d wPrev = coordinates.world(pmouseX, pmouseY);  // where the dragging started
                     final Vector3d wNew = coordinates.world(mouseX, mouseY);  // where the dragging ended
                     final Vector3d delta = wNew.sub(wPrev);  // dragged distance
-                    cursorCopy.setPosition(wPrev.x, wPrev.y);  // set cursor to start of dragging
+                    cursorCopy.position.set(wPrev.x, wPrev.y, 0.0);  // set cursor to start of dragging
                     loop.enqueue(() -> {
                         for (Particle p : cursorCopy.getSelection(physics)) {
                             p.position.add(delta);
@@ -259,7 +257,7 @@ public class Main extends App {
                         Particle[] newParticles = new Particle[physics.particles.length];
                         int j = 0;
                         for (Particle particle : physics.particles) {
-                            if (!cursorCopy.isInside(physics, particle)) {
+                            if (!cursorCopy.isInside(particle, physics)) {
                                 newParticles[j] = particle;
                                 j++;
                             }
@@ -313,7 +311,7 @@ public class Main extends App {
 
         if (!traces || !tracesBefore) renderer.clear();
         tracesBefore = traces;
-        renderer.run(cursor, ImGui.getDrawData(), width, height);  // draw particles and GUI
+        renderer.run(transform, cursor, ImGui.getDrawData(), width, height);  // draw particles and GUI
     }
 
     private void buildGui() {
@@ -582,18 +580,19 @@ public class Main extends App {
                     if (advancedGui) {
                         ImGui.text("Cursor");
                         renderCombo("##cursoraction", cursorActions);
-                        renderCombo("##cursor", cursors);
+                        renderCombo("##cursor", cursorShapes);
+                        cursor.shape = cursorShapes.getActive().object;
                         ImGui.sameLine();
                         if (ImGui.checkbox("show cursor", renderer.drawCursor)) {
                             renderer.drawCursor ^= true;
                         }
                         // cursor size slider
-                        float[] cursorSizeSliderValue = new float[]{(float) cursorSize};
+                        float[] cursorSizeSliderValue = new float[]{(float) cursor.size};
                         if (ImGui.sliderFloat("cursor size [shift+scroll]", cursorSizeSliderValue,
                                 0.001f, 1.000f,
-                                String.format("%.3f", cursorSize),
+                                String.format("%.3f", cursor.size),
                                 ImGuiSliderFlags.Logarithmic)) {
-                            cursorSize = cursorSizeSliderValue[0];
+                            cursor.size = cursorSizeSliderValue[0];
                         }
                         if (cursorActions.getActive().object == CursorAction.BRUSH) {
                             // brush power slider
@@ -1082,9 +1081,6 @@ public class Main extends App {
         particleShader.setTransform(transform);
         particleShader.setSize(particleSize / Math.min(width, height) / (keepParticleSizeIndependentOfZoom ? (float) zoom : 1));
         particleShader.setDetail(MathUtils.constrain(getDetailFromZoom(), ParticleShader.MIN_DETAIL, ParticleShader.MAX_DETAIL));
-
-        renderer.guiOverlayShader.use();
-        renderer.guiOverlayShader.setTransform(transform);
     }
 
     private int getDetailFromZoom() {
@@ -1242,7 +1238,7 @@ public class Main extends App {
             particleSize *= Math.pow(1.2, -y);
         } else if (shiftPressed) {
             // change cursor size
-            cursorSize *= Math.pow(1.2, -y);
+            cursor.size *= Math.pow(1.2, -y);
         } else {
             // change camera zoom
 

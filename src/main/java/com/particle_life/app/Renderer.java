@@ -1,11 +1,10 @@
 package com.particle_life.app;
 
 import com.particle_life.app.cursors.Cursor;
-import com.particle_life.app.shaders.GuiOverlayShader;
 import com.particle_life.app.shaders.ParticleShader;
 import imgui.ImDrawData;
 import imgui.gl3.ImGuiImplGl3;
-import org.joml.Vector2d;
+import org.joml.Matrix4d;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL15.*;
@@ -20,7 +19,6 @@ class Renderer {
     private int vboT;
 
     public ParticleShader particleShader = null;
-    public GuiOverlayShader guiOverlayShader;
     public boolean drawCursor = false;
     private final ImGuiImplGl3 imGuiGl3 = new ImGuiImplGl3();
     private int lastBufferedSize = -1;
@@ -36,8 +34,6 @@ class Renderer {
         vboX = glGenBuffers();
         vboV = glGenBuffers();
         vboT = glGenBuffers();
-
-        guiOverlayShader = new GuiOverlayShader();
     }
 
     void bufferParticleData(double[] x, double[] v, int[] types) {
@@ -110,7 +106,7 @@ class Renderer {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear the framebuffer
     }
 
-    void run(Cursor cursor, ImDrawData imDrawData, int width, int height) {
+    void run(Matrix4d transform, Cursor cursor, ImDrawData imDrawData, int width, int height) {
 
         // draw particles
         if (particleShader != null && lastBufferedSize > 0) {
@@ -118,13 +114,10 @@ class Renderer {
             glViewport(0, 0, width, height);
             particleShader.use();
             glBindVertexArray(vao);
-
             glDrawArrays(GL_POINTS, 0, lastBufferedSize);
         }
 
-        // draw gui overlay
-        guiOverlayShader.use();
-        if (drawCursor) cursor.draw();
+        if (drawCursor) cursor.draw(transform);
 
         imGuiGl3.render(imDrawData);  // will change shader and vao
     }
