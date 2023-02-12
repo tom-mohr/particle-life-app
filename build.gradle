@@ -2,11 +2,10 @@ import org.gradle.internal.os.OperatingSystem
 
 plugins {
     id "java"
-    id "application"                            // for "run" task
-    id 'edu.sc.seis.launch4j' version '2.5.1'   // for generating .exe
-    id 'org.beryx.runtime' version '1.12.7'     // for generating JRE
-   id 'com.github.johnrengelman.shadow' version '7.1.2' //to make linux build 
-
+    id "application"                                     // for "run" task
+    id 'edu.sc.seis.launch4j' version '2.5.1'            // for generating .exe
+    id 'org.beryx.runtime' version '1.12.7'              // for generating JRE
+    id 'com.github.johnrengelman.shadow' version '7.1.2' // only needed to make linux build
 }
 
 application {
@@ -32,25 +31,25 @@ runtime {
     additive = true
 }
 
-task copyJre (type: Copy) {
+tasks.register('copyJre', Copy) {
     dependsOn tasks.runtime
 
     from layout.buildDirectory.dir("jre")
     into layout.buildDirectory.dir("app/jre")
 }
 
-task copyLaunch4j (type: Copy) {
+tasks.register('copyLaunch4j', Copy) {
     dependsOn tasks.createExe
 
     from layout.buildDirectory.dir("launch4j")
     into layout.buildDirectory.dir("app")
 }
 
-task assembleApp {
+tasks.register('assembleApp') {
     dependsOn tasks.copyLaunch4j, tasks.copyJre
 }
 
-task zipApp (type: Zip) {
+tasks.register('zipApp', Zip) {
     dependsOn tasks.assembleApp
     from layout.buildDirectory.dir("app")
     destinationDirectory = layout.buildDirectory.dir("zipApp")
@@ -75,8 +74,8 @@ switch (OperatingSystem.current()) {
     case OperatingSystem.LINUX:
         def osArch = System.getProperty("os.arch")
         project.ext.natives = osArch.startsWith("arm") || osArch.startsWith("aarch64")
-            ? "linux-${osArch.contains("64") || osArch.startsWith("armv8") ? "arm64" : "arm32"}"
-            : "linux"
+                ? "linux-${osArch.contains("64") || osArch.startsWith("armv8") ? "arm64" : "arm32"}"
+                : "linux"
         break
     case OperatingSystem.MAC_OS:
         project.ext.natives = "macos"
@@ -84,15 +83,15 @@ switch (OperatingSystem.current()) {
     case OperatingSystem.WINDOWS:
         def osArch = System.getProperty("os.arch")
         project.ext.natives = osArch.contains("64")
-            ? "windows${osArch.startsWith("aarch64") ? "-arm64" : ""}"
-            : "windows-x86"
+                ? "windows${osArch.startsWith("aarch64") ? "-arm64" : ""}"
+                : "windows-x86"
         break
 }
 
 repositories {
     mavenCentral()
     mavenLocal()
-    
+
     // JitPack allows to easily add dependencies on GitHub repos
     // (e.g. implementation 'com.github.User:Repo:Tag')
     maven { url "https://jitpack.io" }  // this line should be at the end of the repositories
@@ -110,8 +109,8 @@ dependencies {
     implementation "io.github.spair:imgui-java-natives-$natives:$imguiVersion"
 
     // LWJGL
-    
-    [".lwjgl", ".assimp", ".bgfx", ".cuda", ".egl", ".glfw", ".jawt", ".jemalloc", ".libdivide", ".llvm", 
+
+    [".lwjgl", ".assimp", ".bgfx", ".cuda", ".egl", ".glfw", ".jawt", ".jemalloc", ".libdivide", ".llvm",
      ".lmdb", ".lz4", ".meow", ".nanovg", ".nfd", ".nuklear", ".odbc", ".openal", ".opencl", ".opengl", ".opengles",
      ".opus", ".ovr", ".par", ".remotery", ".rpmalloc", ".shaderc", ".sse", ".stb", ".tinyexr", ".tinyfd",
      ".tootle", ".vma", ".vulkan", ".xxhash", ".yoga", ".zstd"].each {
