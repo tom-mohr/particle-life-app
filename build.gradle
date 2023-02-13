@@ -139,8 +139,8 @@ dependencies {
     // YamlBeans for parsing YAML files conveniently
     implementation 'com.esotericsoftware.yamlbeans:yamlbeans:1.15'
 
-    // jOOR
-    implementation 'org.jooq:joor:0.9.14'
+    // JOML
+    implementation 'org.joml:joml:1.10.1'
 
     // imGui
     implementation "io.github.spair:imgui-java-binding:$imguiVersion"
