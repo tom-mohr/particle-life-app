@@ -14,12 +14,36 @@ application {
     }
 }
 
+run {
+    classpath = layout.files(
+
+            // We need to include the "runtimeClasspath" here,
+            // because we are explicitly setting the "classpath" property.
+            // Otherwise, this would be included automatically.
+            sourceSets.main.runtimeClasspath,
+
+            // We need to explicitly include "resources" here,
+            // because we are excluding "resources" in the "jar" task.
+            "src/main/resources"
+    )
+}
+
 launch4j {
     icon = "${projectDir}/favicon.ico"
     mainClassName = 'com.particle_life.app.Main'
     dontWrapJar = true
     bundledJre64Bit = true
     bundledJrePath = "jre"
+    classpath = [
+            // We need to include the "lib/*" folder here,
+            // because we are explicitly setting the "classpath" property.
+            // Otherwise, this would be included automatically.
+            "lib/*",
+
+            // We need to explicitly include "resources" here,
+            // because we are excluding "resources" in the "jar" task.
+            "resources/*"
+    ]
 }
 
 // creates folder "jre"
@@ -38,6 +62,12 @@ tasks.register('copyJre', Copy) {
     into layout.buildDirectory.dir("app/jre")
 }
 
+// copy resources to
+tasks.register("copyResources", Copy) {
+    from layout.projectDirectory.dir("src/main/resources")
+    into layout.buildDirectory.dir("app/resources")
+}
+
 tasks.register('copyLaunch4j', Copy) {
     dependsOn tasks.createExe
 
@@ -46,7 +76,7 @@ tasks.register('copyLaunch4j', Copy) {
 }
 
 tasks.register('assembleApp') {
-    dependsOn tasks.copyLaunch4j, tasks.copyJre
+    dependsOn tasks.copyLaunch4j, tasks.copyResources, tasks.copyJre
 }
 
 tasks.register('zipApp', Zip) {
@@ -66,6 +96,12 @@ ext {
 
 jar {
     mainClassName = "com.particle_life.app.Main"  // required for "run" task
+
+    // This ignores all resource files when bundling the JAR.
+    // Reason: ToWe don't want our "resources" files to be included
+    // in the JAR, but instead in a separate directory (which we
+    // place next to the executable in the "assembleApp" task).
+    processResources.exclude('*')
 }
 
 project.ext.lwjglVersion = "3.3.0"
