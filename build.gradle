@@ -9,6 +9,8 @@ plugins {
 }
 
 application {
+    mainClass = "com.particle_life.app.Main"  // required for "run" task
+
     if (OperatingSystem.current() == OperatingSystem.MAC_OS) {
         applicationDefaultJvmArgs = ["-XstartOnFirstThread"]
     }
@@ -94,8 +96,6 @@ ext {
 }
 
 jar {
-    mainClassName = "com.particle_life.app.Main"  // required for "run" task
-
     // This ignores all resource files when bundling the JAR.
     // Reason: ToWe don't want our "resources" files to be included
     // in the JAR, but instead in a separate directory (which we
