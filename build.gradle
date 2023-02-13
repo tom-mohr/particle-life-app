@@ -147,11 +147,8 @@ dependencies {
     implementation "io.github.spair:imgui-java-natives-$natives:$imguiVersion"
 
     // LWJGL
-
-    [".lwjgl", ".assimp", ".bgfx", ".cuda", ".egl", ".glfw", ".jawt", ".jemalloc", ".libdivide", ".llvm",
-     ".lmdb", ".lz4", ".meow", ".nanovg", ".nfd", ".nuklear", ".odbc", ".openal", ".opencl", ".opengl", ".opengles",
-     ".opus", ".ovr", ".par", ".remotery", ".rpmalloc", ".shaderc", ".sse", ".stb", ".tinyexr", ".tinyfd",
-     ".tootle", ".vma", ".vulkan", ".xxhash", ".yoga", ".zstd"].each {
+    // see https://www.lwjgl.org/customize for a list of all available contents
+    [".lwjgl", ".glfw", ".opengl"].each {
         implementation "org.lwjgl.osgi:org.lwjgl$it:$lwjglVersion"
     }
 }
