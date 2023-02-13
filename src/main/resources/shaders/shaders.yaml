@@ -1,0 +1,28 @@
+name: "repeat"
+description: "Draws copies of particles (without colors) beyond the borders. This is helpful if \"wrap\" is enabled."
+vertex: "default.vert"
+geometry: "repeat.geom"
+fragment: "default.frag"
+---
+name: "default"
+vertex: "default.vert"
+geometry: "default.geom"
+fragment: "default.frag"
+---
+name: "white"
+description: "All particles are white."
+vertex: "white.vert"
+geometry: "default.geom"
+fragment: "default.frag"
+---
+name: "velocity brightness"
+description: "Brightness based on velocity."
+vertex: "speed_fade.vert"
+geometry: "default.geom"
+fragment: "default.frag"
+---
+name: "velocity color"
+description: "Color based on velocity. Ignores the current color palette."
+vertex: "speed.vert"
+geometry: "default.geom"
+fragment: "default.frag"

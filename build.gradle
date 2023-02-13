@@ -136,6 +136,9 @@ dependencies {
 
     implementation "com.github.tom-mohr:particle-life:v0.2.0"
 
+    // YamlBeans for parsing YAML files conveniently
+    implementation 'com.esotericsoftware.yamlbeans:yamlbeans:1.15'
+
     // jOOR
     implementation 'org.jooq:joor:0.9.14'
 
