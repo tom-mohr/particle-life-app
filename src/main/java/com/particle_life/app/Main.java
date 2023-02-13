@@ -1245,7 +1245,7 @@ public class Main extends App {
             double zoomIncrease = Math.pow(zoomStepFactor, y);
 
             Coordinates c = new Coordinates(width, height, shiftGoal, zoomGoal);  // use "goal" shift and zoom
-            c.zoomInOnMouse(new Vector2d(mouseX, mouseY), Math.max(MIN_ZOOM, zoomIncrease * zoomGoal), zoomIncrease);
+            c.zoomInOnMouse(new Vector2d(mouseX, mouseY), Math.max(MIN_ZOOM, zoomGoal * zoomIncrease));
 
             zoomGoal = c.zoom;
             shiftGoal.set(c.shift);

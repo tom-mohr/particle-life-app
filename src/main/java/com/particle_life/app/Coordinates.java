@@ -88,17 +88,14 @@ class Coordinates {
         return this;
     }
 
-    Coordinates zoomInOnMouse(Vector2d mouse, double newZoom, double zoomFactor) {
-
+    Coordinates zoomInOnMouse(Vector2d mouse, double newZoom) {
+        double zoomFactor = newZoom / zoom;
         Vector3d w = world(mouse.x, mouse.y);
-
-        zoom = newZoom;
-
         shift.set(new Vector3d(w)
                 .add(shift)
                 .div(zoomFactor)
                 .sub(w));
-
+        zoom = newZoom;
         return this;
     }
 }
