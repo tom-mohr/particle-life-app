@@ -7,22 +7,10 @@ import org.joml.Vector3d;
 
 import java.util.List;
 
-class AcceleratorProvider implements InfoWrapperProvider<AcceleratorCodeData> {
+class AcceleratorProvider implements InfoWrapperProvider<Accelerator> {
 
     @Override
-    public List<InfoWrapper<AcceleratorCodeData>> create() {
-        return createDefaultAccelerators().stream()
-                .map(infoWrapper -> new InfoWrapper<>(
-                        infoWrapper.name,
-                        infoWrapper.description,
-                        new AcceleratorCodeData(false, "", "", "", infoWrapper.object)
-                ))
-                .toList();
-
-        //todo: also load and compile user code
-    }
-
-    private List<InfoWrapper<Accelerator>> createDefaultAccelerators() {
+    public List<InfoWrapper<Accelerator>> create() {
         return List.of(
                 new InfoWrapper<Accelerator>("particle life", (a, pos) -> {
                     double rmin = 0.3;

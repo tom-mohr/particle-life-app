@@ -5,7 +5,6 @@ import com.particle_life.app.color.Color;
 import com.particle_life.app.color.Palette;
 import com.particle_life.app.color.PalettesProvider;
 import com.particle_life.app.cursors.*;
-import com.particle_life.app.selection.InfoWrapper;
 import com.particle_life.app.selection.SelectionManager;
 import com.particle_life.app.shaders.ParticleShader;
 import com.particle_life.app.shaders.ShaderProvider;
@@ -17,7 +16,6 @@ import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImBoolean;
 import imgui.type.ImFloat;
 import imgui.type.ImInt;
-import imgui.type.ImString;
 import org.joml.Matrix4d;
 import org.joml.Vector2d;
 import org.joml.Vector3d;
@@ -38,7 +36,7 @@ public class Main extends App {
     private final Clock renderClock = new Clock(60);
     private SelectionManager<ParticleShader> shaders;
     private SelectionManager<Palette> palettes;
-    private SelectionManager<AcceleratorCodeData> accelerators;
+    private SelectionManager<Accelerator> accelerators;
     private SelectionManager<MatrixGenerator> matrixGenerators;
     private SelectionManager<PositionSetter> positionSetters;
     private SelectionManager<TypeSetter> typeSetters;
@@ -48,7 +46,6 @@ public class Main extends App {
 
     // helper classes
     private final ImGuiStatsFormatter statsFormatter = new ImGuiStatsFormatter();
-    private final AcceleratorCompiler acceleratorCompiler = new AcceleratorCompiler();
     private final Matrix4d transform = new Matrix4d();
     private final Renderer renderer = new Renderer();
 
@@ -105,16 +102,11 @@ public class Main extends App {
     private final ImBoolean showGui = new ImBoolean(true);
     private boolean advancedGui = false;
     private final ImBoolean showStyleEditor = new ImBoolean(false);
-    private final ImBoolean showAcceleratorEditor = new ImBoolean(false);
     private final ImBoolean showSettings = new ImBoolean(false);
     private final ImBoolean showShortcutsWindow = new ImBoolean(false);
     private final ImBoolean showAboutWindow = new ImBoolean(false);
 
     // GUI: store data on the current state of the GUI
-    private InfoWrapper<AcceleratorCodeData> editingAccelerator = null;
-    private final ImString textInputAcceleratorCodeImports = new ImString();
-    private final ImString textInputAcceleratorCodeMethodCode = new ImString();
-    private final ImString textInputAcceleratorCodeClassName = new ImString();
     private boolean tracesBefore = traces;// if "traces" was enabled in last frame
 
     @Override
@@ -148,7 +140,7 @@ public class Main extends App {
 
     private void createPhysics() {
         physics = new ExtendedPhysics(
-                accelerators.getActive().accelerator,
+                accelerators.getActive(),
                 positionSetters.getActive(),
                 matrixGenerators.getActive(),
                 typeSetters.getActive());
@@ -458,28 +450,13 @@ public class Main extends App {
                     if (advancedGui) {
                         ImGui.text("Accelerator [v]");
                         if (renderCombo("##accelerator", accelerators)) {
-                            final Accelerator nextAccelerator = accelerators.getActive().accelerator;
+                            final Accelerator nextAccelerator = accelerators.getActive();
                             loop.enqueue(() -> physics.accelerator = nextAccelerator);
                         }
-                        ImGui.sameLine();
-                        if (accelerators.getActive().mayEdit) {
-                            if (ImGui.button("Edit")) {
-                                showAcceleratorEditor.set(true);
-                                editingAccelerator = accelerators.getActiveInfoWrapper();
-                                acceleratorCompiler.clearError();
-                            }
+                        String acceleratorDescription = accelerators.getActiveDescription();
+                        if (!acceleratorDescription.isEmpty()) {
                             ImGui.sameLine();
-                        }
-                        if (ImGui.button("New")) {
-                            showAcceleratorEditor.set(true);
-                            editingAccelerator = new InfoWrapper<>("ExampleAccelerator", "", new AcceleratorCodeData(
-                                    true,
-                                    "",
-                                    "ExampleAccelerator",
-                                    "return x;",
-                                    null
-                            ));
-                            acceleratorCompiler.clearError();
+                            ImGuiUtils.helpMarker(acceleratorDescription);
                         }
                     }
 
@@ -772,79 +749,6 @@ public class Main extends App {
             }
             ImGui.end();
         }
-
-        if (showAcceleratorEditor.get()) {
-
-            float w = 400;
-            float h = 400;
-            ImGui.setNextWindowPos((width - w) / 2f, (height - h) / 2f, ImGuiCond.Once);
-            ImGui.setNextWindowSize(0, 0, ImGuiCond.Once);
-            ImGui.setNextWindowBgAlpha(guiBackgroundAlpha);
-
-            if (ImGui.begin("Edit Accelerator", showAcceleratorEditor)) {
-
-                textInputAcceleratorCodeImports.set(editingAccelerator.object.importCode);
-                textInputAcceleratorCodeMethodCode.set(editingAccelerator.object.methodCode);
-                textInputAcceleratorCodeClassName.set(editingAccelerator.object.className);
-
-                ImGui.textDisabled("// imports:");
-                ImGui.sameLine();
-                ImGuiUtils.helpMarker("Add imports here if you need them. Example: import java.util.List;");
-                if (ImGui.inputTextMultiline("##Imports", textInputAcceleratorCodeImports, -1, 50, ImGuiInputTextFlags.CallbackResize)) {
-                    editingAccelerator.object.importCode = textInputAcceleratorCodeImports.get();
-                }
-
-                ImGui.text("public class ");
-                ImGui.sameLine();
-                ImGui.pushItemWidth(200);
-                if (ImGui.inputText("##Class Name", textInputAcceleratorCodeClassName, ImGuiInputTextFlags.CallbackResize | ImGuiInputTextFlags.CharsNoBlank | ImGuiInputTextFlags.AutoSelectAll)) {
-                    editingAccelerator.object.className = textInputAcceleratorCodeClassName.get();
-                    editingAccelerator.name = textInputAcceleratorCodeClassName.get();
-                }
-                ImGui.popItemWidth();
-                ImGui.sameLine();
-                ImGui.text("implements Accelerator {");
-                ImGui.indent();
-
-                ImGui.text("public Vector3d accelerate(double a, Vector3d x) {");
-                ImGui.indent();
-                if (ImGui.inputTextMultiline("##Code", textInputAcceleratorCodeMethodCode, -1, 100, ImGuiInputTextFlags.CallbackResize | ImGuiInputTextFlags.AllowTabInput)) {
-                    editingAccelerator.object.methodCode = textInputAcceleratorCodeMethodCode.get();
-                }
-                ImGui.unindent();
-                ImGui.text("}");
-                ImGui.unindent();
-                ImGui.text("}");
-
-                if (ImGui.button("OK")) {
-
-                    Accelerator compiledAccelerator = acceleratorCompiler.compile(editingAccelerator.object);
-
-                    if (compiledAccelerator != null) {
-                        editingAccelerator.object.accelerator = compiledAccelerator;
-
-                        if (accelerators.contains(editingAccelerator)) {
-                            // if this accelerator is currently active, also set the accelerator of physics to the new one.
-                            if (accelerators.getActiveInfoWrapper() == editingAccelerator) {
-                                final Accelerator newAccelerator = editingAccelerator.object.accelerator;
-                                loop.enqueue(() -> physics.accelerator = newAccelerator);
-                            }
-                        } else {
-                            // add new
-                            accelerators.add(editingAccelerator);
-                        }
-                    }
-                }
-
-                if (acceleratorCompiler.hasError()) {
-                    ImGui.textColored(1, 0, 0, 1, acceleratorCompiler.getErrorMessage());
-                    if (ImGui.button("Clear")) {
-                        acceleratorCompiler.clearError();
-                    }
-                }
-            }
-            ImGui.end();
-        }
     }
 
     private void buildMainMenu() {
@@ -1018,12 +922,12 @@ public class Main extends App {
             case " " -> loop.pause ^= true;
             case "v" -> {
                 selectionStep(accelerators, 1);
-                final Accelerator nextAccelerator = accelerators.getActive().accelerator;
+                final Accelerator nextAccelerator = accelerators.getActive();
                 loop.enqueue(() -> physics.accelerator = nextAccelerator);
             }
             case "V" -> {
                 selectionStep(accelerators, -1);
-                final Accelerator nextAccelerator = accelerators.getActive().accelerator;
+                final Accelerator nextAccelerator = accelerators.getActive();
                 loop.enqueue(() -> physics.accelerator = nextAccelerator);
             }
             case "x" -> {
