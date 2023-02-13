@@ -30,6 +30,22 @@ public class SelectionManager<T> {
         return activeIndex;
     }
 
+    public InfoWrapper<T> getActiveInfoWrapper() {
+        return items.get(activeIndex);
+    }
+
+    public T getActive() {
+        return getActiveInfoWrapper().object;
+    }
+
+    public String getActiveName() {
+        return getActiveInfoWrapper().name;
+    }
+
+    public String getActiveDescription() {
+        return getActiveInfoWrapper().description;
+    }
+
     public void setActive(int i) {
 
         if (i < 0 || i >= items.size()) {
@@ -38,18 +54,14 @@ public class SelectionManager<T> {
 
         if (i != activeIndex) {
             activeIndex = i;
-            activeChanged();
+            onActiveChanged();
         }
     }
 
     /**
      * You can override this method.
      */
-    protected void activeChanged() {
-    }
-
-    public InfoWrapper<T> getActive() {
-        return items.get(activeIndex);
+    protected void onActiveChanged() {
     }
 
     public void add(InfoWrapper<T> item) {
@@ -57,7 +69,7 @@ public class SelectionManager<T> {
         items.add(item);
 
         if (wasEmpty) {
-            activeChanged();
+            onActiveChanged();
         }
     }
 
@@ -66,7 +78,7 @@ public class SelectionManager<T> {
         this.items.addAll(items);
 
         if (wasEmpty) {
-            activeChanged();
+            onActiveChanged();
         }
     }
 

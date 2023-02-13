@@ -143,15 +143,15 @@ public class Main extends App {
 
         // cursor object must be created after renderer.init()
         cursor = new Cursor();
-        cursor.shape = cursorShapes.getActive().object;  // set initial cursor shape (would be null otherwise)
+        cursor.shape = cursorShapes.getActive();  // set initial cursor shape (would be null otherwise)
     }
 
     private void createPhysics() {
         physics = new ExtendedPhysics(
-                accelerators.getActive().object.accelerator,
-                positionSetters.getActive().object,
-                matrixGenerators.getActive().object,
-                typeSetters.getActive().object);
+                accelerators.getActive().accelerator,
+                positionSetters.getActive(),
+                matrixGenerators.getActive(),
+                typeSetters.getActive());
         physicsSnapshot = new PhysicsSnapshot();
         physicsSnapshot.take(physics, physicsSnapshotLoadDistributor);
         newSnapshotAvailable.set(true);
@@ -209,7 +209,7 @@ public class Main extends App {
 
             final Cursor cursorCopy = cursor.copy();  // need to copy for async access in loop.enqueue()
             // execute cursor action
-            switch (cursorActions.getActive().object) {
+            switch (cursorActions.getActive()) {
                 case MOVE -> {
                     final Vector3d wPrev = coordinates.world(pmouseX, pmouseY);  // where the dragging started
                     final Vector3d wNew = coordinates.world(mouseX, mouseY);  // where the dragging ended
@@ -257,7 +257,7 @@ public class Main extends App {
             }
         }
 
-        renderer.particleShader = shaders.getActive().object;  // need to assign a shader before buffering particle data
+        renderer.particleShader = shaders.getActive();  // need to assign a shader before buffering particle data
 
         if (newSnapshotAvailable.get()) {
 
@@ -360,7 +360,7 @@ public class Main extends App {
                         if (advancedGui) {
 
                             ImGuiBarGraph.draw(200, 100,
-                                    palettes.getActive().object,
+                                    palettes.getActive(),
                                     typeCountDiagramStepSize,
                                     physicsSnapshot.typeCount,
                                     (type, newValue) -> {
@@ -380,7 +380,7 @@ public class Main extends App {
 
                         // MATRIX
                         ImGuiMatrix.draw(200 * scale, 200 * scale,
-                                palettes.getActive().object,
+                                palettes.getActive(),
                                 matrixGuiStepSize,
                                 settings.matrix,
                                 (i, j, newValue) -> loop.enqueue(() -> physics.settings.matrix.set(i, j, newValue))
@@ -406,7 +406,7 @@ public class Main extends App {
 
                         // MATRIX GENERATORS
                         if (renderCombo("##matrix", matrixGenerators)) {
-                            final MatrixGenerator nextMatrixGenerator = matrixGenerators.getActive().object;
+                            final MatrixGenerator nextMatrixGenerator = matrixGenerators.getActive();
                             loop.enqueue(() -> physics.matrixGenerator = nextMatrixGenerator);
                         }
                         ImGui.sameLine();
@@ -419,7 +419,7 @@ public class Main extends App {
 
                     // POSITION SETTERS
                     if (renderCombo("##positions", positionSetters)) {
-                        final PositionSetter nextPositionSetter = positionSetters.getActive().object;
+                        final PositionSetter nextPositionSetter = positionSetters.getActive();
                         loop.enqueue(() -> physics.positionSetter = nextPositionSetter);
                     }
                     ImGui.sameLine();
@@ -435,7 +435,7 @@ public class Main extends App {
                     if (ImGui.button("types [t]")) {
                         loop.enqueue(() -> {
                             TypeSetter previousTypeSetter = physics.typeSetter;
-                            physics.typeSetter = typeSetters.getActive().object;
+                            physics.typeSetter = typeSetters.getActive();
                             physics.setTypes();
                             physics.typeSetter = previousTypeSetter;
                         });
@@ -458,14 +458,14 @@ public class Main extends App {
                     if (advancedGui) {
                         ImGui.text("Accelerator [v]");
                         if (renderCombo("##accelerator", accelerators)) {
-                            final Accelerator nextAccelerator = accelerators.getActive().object.accelerator;
+                            final Accelerator nextAccelerator = accelerators.getActive().accelerator;
                             loop.enqueue(() -> physics.accelerator = nextAccelerator);
                         }
                         ImGui.sameLine();
-                        if (accelerators.getActive().object.mayEdit) {
+                        if (accelerators.getActive().mayEdit) {
                             if (ImGui.button("Edit")) {
                                 showAcceleratorEditor.set(true);
-                                editingAccelerator = accelerators.getActive();
+                                editingAccelerator = accelerators.getActiveInfoWrapper();
                                 acceleratorCompiler.clearError();
                             }
                             ImGui.sameLine();
@@ -543,7 +543,7 @@ public class Main extends App {
                 {
                     // SHADERS
                     renderCombo("shader [s]", shaders);
-                    String shaderDescription = shaders.getActive().description;
+                    String shaderDescription = shaders.getActiveDescription();
                     if (!shaderDescription.isBlank()) {
                         ImGui.sameLine();
                         ImGuiUtils.helpMarker("(i)", shaderDescription);
@@ -568,7 +568,7 @@ public class Main extends App {
                         ImGui.text("Cursor");
                         renderCombo("##cursoraction", cursorActions);
                         renderCombo("##cursor", cursorShapes);
-                        cursor.shape = cursorShapes.getActive().object;
+                        cursor.shape = cursorShapes.getActive();
                         ImGui.sameLine();
                         if (ImGui.checkbox("show cursor", renderer.drawCursor)) {
                             renderer.drawCursor ^= true;
@@ -581,7 +581,7 @@ public class Main extends App {
                                 ImGuiSliderFlags.Logarithmic)) {
                             cursor.size = cursorSizeSliderValue[0];
                         }
-                        if (cursorActions.getActive().object == CursorAction.BRUSH) {
+                        if (cursorActions.getActive() == CursorAction.BRUSH) {
                             // brush power slider
                             int[] brushPowerSliderValue = new int[]{brushPower};
                             if (ImGui.sliderInt("brush power", brushPowerSliderValue, 1, 100)) {
@@ -825,7 +825,7 @@ public class Main extends App {
 
                         if (accelerators.contains(editingAccelerator)) {
                             // if this accelerator is currently active, also set the accelerator of physics to the new one.
-                            if (accelerators.getActive() == editingAccelerator) {
+                            if (accelerators.getActiveInfoWrapper() == editingAccelerator) {
                                 final Accelerator newAccelerator = editingAccelerator.object.accelerator;
                                 loop.enqueue(() -> physics.accelerator = newAccelerator);
                             }
@@ -914,9 +914,8 @@ public class Main extends App {
      * @return if the selection index changed
      */
     private boolean renderCombo(String label, SelectionManager<?> selectionManager) {
-        InfoWrapper<?> currentShader = selectionManager.getActive();
         int previousIndex = selectionManager.getActiveIndex();
-        if (ImGui.beginCombo(label, currentShader.name)) {
+        if (ImGui.beginCombo(label, selectionManager.getActiveName())) {
             for (int i = 0; i < selectionManager.size(); i++) {
                 boolean isSelected = selectionManager.getActiveIndex() == i;
                 if (ImGui.selectable(selectionManager.get(i).name, isSelected)) {
@@ -945,7 +944,7 @@ public class Main extends App {
         // calculate palette
         int nTypes = settings.matrix.size();//todo: use value from buffer?
         Color[] colors = new Color[nTypes];
-        Palette palette = palettes.getActive().object;
+        Palette palette = palettes.getActive();
         for (int i = 0; i < nTypes; i++) {
             colors[i] = palette.getColor(i, nTypes);
         }
@@ -1010,7 +1009,7 @@ public class Main extends App {
             case "p" -> loop.enqueue(physics::setPositions);
             case "t" -> loop.enqueue(() -> {
                 TypeSetter previousTypeSetter = physics.typeSetter;
-                physics.typeSetter = typeSetters.getActive().object;
+                physics.typeSetter = typeSetters.getActive();
                 physics.setTypes();
                 physics.typeSetter = previousTypeSetter;
             });
@@ -1019,32 +1018,32 @@ public class Main extends App {
             case " " -> loop.pause ^= true;
             case "v" -> {
                 selectionStep(accelerators, 1);
-                final Accelerator nextAccelerator = accelerators.getActive().object.accelerator;
+                final Accelerator nextAccelerator = accelerators.getActive().accelerator;
                 loop.enqueue(() -> physics.accelerator = nextAccelerator);
             }
             case "V" -> {
                 selectionStep(accelerators, -1);
-                final Accelerator nextAccelerator = accelerators.getActive().object.accelerator;
+                final Accelerator nextAccelerator = accelerators.getActive().accelerator;
                 loop.enqueue(() -> physics.accelerator = nextAccelerator);
             }
             case "x" -> {
                 selectionStep(positionSetters, 1);
-                final PositionSetter nextPositionSetter = positionSetters.getActive().object;
+                final PositionSetter nextPositionSetter = positionSetters.getActive();
                 loop.enqueue(() -> physics.positionSetter = nextPositionSetter);
             }
             case "X" -> {
                 selectionStep(positionSetters, -1);
-                final PositionSetter nextPositionSetter = positionSetters.getActive().object;
+                final PositionSetter nextPositionSetter = positionSetters.getActive();
                 loop.enqueue(() -> physics.positionSetter = nextPositionSetter);
             }
             case "r" -> {
                 selectionStep(matrixGenerators, 1);
-                final MatrixGenerator nextMatrixGenerator = matrixGenerators.getActive().object;
+                final MatrixGenerator nextMatrixGenerator = matrixGenerators.getActive();
                 loop.enqueue(() -> physics.matrixGenerator = nextMatrixGenerator);
             }
             case "R" -> {
                 selectionStep(matrixGenerators, -1);
-                final MatrixGenerator nextMatrixGenerator = matrixGenerators.getActive().object;
+                final MatrixGenerator nextMatrixGenerator = matrixGenerators.getActive();
                 loop.enqueue(() -> physics.matrixGenerator = nextMatrixGenerator);
             }
         }
