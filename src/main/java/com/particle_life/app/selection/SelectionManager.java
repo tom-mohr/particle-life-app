@@ -9,6 +9,15 @@ public class SelectionManager<T> {
     private final List<InfoWrapper<T>> items = new ArrayList<>();
     private int activeIndex = 0;
 
+    public SelectionManager(InfoWrapperProvider<T> provider) {
+        List<InfoWrapper<T>> newItems = provider.create();
+        if (newItems.isEmpty()) {
+            throw new RuntimeException("SelectionManager %s was initialized with zero items."
+                .formatted(this.getClass().getName()));
+        }
+        addAll(newItems);
+    }
+
     public int size() {
         return items.size();
     }

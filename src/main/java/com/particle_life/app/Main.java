@@ -36,15 +36,15 @@ public class Main extends App {
 
     // data
     private final Clock renderClock = new Clock(60);
-    private final SelectionManager<ParticleShader> shaders = new SelectionManager<>();
-    private final SelectionManager<Palette> palettes = new SelectionManager<>();
-    private final SelectionManager<AcceleratorCodeData> accelerators = new SelectionManager<>();
-    private final SelectionManager<MatrixGenerator> matrixGenerators = new SelectionManager<>();
-    private final SelectionManager<PositionSetter> positionSetters = new SelectionManager<>();
-    private final SelectionManager<TypeSetter> typeSetters = new SelectionManager<>();
+    private SelectionManager<ParticleShader> shaders;
+    private SelectionManager<Palette> palettes;
+    private SelectionManager<AcceleratorCodeData> accelerators;
+    private SelectionManager<MatrixGenerator> matrixGenerators;
+    private SelectionManager<PositionSetter> positionSetters;
+    private SelectionManager<TypeSetter> typeSetters;
     private Cursor cursor;
-    private final SelectionManager<CursorShape> cursorShapes = new SelectionManager<>();
-    private final SelectionManager<CursorAction> cursorActions = new SelectionManager<>();
+    private SelectionManager<CursorShape> cursorShapes;
+    private SelectionManager<CursorAction> cursorActions;
 
     // helper classes
     private final ImGuiStatsFormatter statsFormatter = new ImGuiStatsFormatter();
@@ -120,15 +120,14 @@ public class Main extends App {
     @Override
     protected void setup() {
 
-        // todo: throw error if any return 0 elements
-        shaders.addAll(new ShaderProvider().create());
-        palettes.addAll(new PalettesProvider().create());
-        accelerators.addAll(new AcceleratorProvider().create());
-        positionSetters.addAll(new PositionSetterProvider().create());
-        matrixGenerators.addAll(new MatrixGeneratorProvider().create());
-        typeSetters.addAll(new TypeSetterProvider().create());
-        cursorShapes.addAll(new CursorProvider().create());
-        cursorActions.addAll(new CursorActionProvider().create());
+        shaders = new SelectionManager<>(new ShaderProvider());
+        palettes = new SelectionManager<>(new PalettesProvider());
+        accelerators = new SelectionManager<>(new AcceleratorProvider());
+        matrixGenerators = new SelectionManager<>(new MatrixGeneratorProvider());
+        positionSetters = new SelectionManager<>(new PositionSetterProvider());
+        typeSetters = new SelectionManager<>(new TypeSetterProvider());
+        cursorShapes = new SelectionManager<>(new CursorProvider());
+        cursorActions = new SelectionManager<>(new CursorActionProvider());
 
         createPhysics();
 
@@ -211,7 +210,7 @@ public class Main extends App {
             final Cursor cursorCopy = cursor.copy();  // need to copy for async access in loop.enqueue()
             // execute cursor action
             switch (cursorActions.getActive().object) {
-                case MOVE:
+                case MOVE -> {
                     final Vector3d wPrev = coordinates.world(pmouseX, pmouseY);  // where the dragging started
                     final Vector3d wNew = coordinates.world(mouseX, mouseY);  // where the dragging ended
                     final Vector3d delta = wNew.sub(wPrev);  // dragged distance
@@ -222,8 +221,8 @@ public class Main extends App {
                             physics.ensurePosition(p.position);  // wrap or clamp
                         }
                     });
-                    break;
-                case BRUSH:
+                }
+                case BRUSH -> {
                     final int addCount = brushPower;
                     loop.enqueue(() -> {
                         int prevLength = physics.particles.length;
@@ -241,8 +240,8 @@ public class Main extends App {
                             physics.particles[prevLength + i] = particle;
                         }
                     });
-                    break;
-                case DELETE:
+                }
+                case DELETE -> {
                     loop.enqueue(() -> {
                         Particle[] newParticles = new Particle[physics.particles.length];
                         int j = 0;
@@ -254,7 +253,7 @@ public class Main extends App {
                         }
                         physics.particles = Arrays.copyOf(newParticles, j);  // cut to correct length
                     });
-                    break;
+                }
             }
         }
 
@@ -431,8 +430,7 @@ public class Main extends App {
                     ImGui.separator();
 
                     // TYPE SETTERS
-                    if (renderCombo("##types", typeSetters)) {
-                    }
+                    renderCombo("##types", typeSetters);
                     ImGui.sameLine();
                     if (ImGui.button("types [t]")) {
                         loop.enqueue(() -> {

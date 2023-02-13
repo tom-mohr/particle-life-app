@@ -5,6 +5,7 @@ import imgui.flag.ImGuiBackendFlags;
 import imgui.type.ImInt;
 
 import java.nio.ByteBuffer;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -93,11 +94,7 @@ public final class ImGuiImplGl3 {
         readGlVersion();
         setupBackendCapabilitiesFlags();
 
-        if (glslVersion == null) {
-            this.glslVersion = "#version 130";
-        } else {
-            this.glslVersion = glslVersion;
-        }
+        this.glslVersion = Objects.requireNonNullElse(glslVersion, "#version 130");
 
         createDeviceObjects();
     }
