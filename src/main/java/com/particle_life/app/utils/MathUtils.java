@@ -44,6 +44,7 @@ public final class MathUtils {
     /**
      * Returns <code>Math.round(value)</code> instead of <code>Math.floor(value)</code>
      * if <code>value</code> is closer to the next integer than <code>threshold</code>.
+     *
      * @param value
      * @param threshold some positive value like 0.001
      * @return an integer
@@ -58,6 +59,7 @@ public final class MathUtils {
 
     /**
      * See comment on {@link #tolerantFloor(double, double)}.
+     *
      * @param value
      * @param threshold
      * @return

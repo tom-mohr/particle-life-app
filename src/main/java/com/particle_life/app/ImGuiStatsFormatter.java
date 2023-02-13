@@ -32,7 +32,7 @@ public class ImGuiStatsFormatter {
         maxNameLength = Math.max(maxNameLength, currentMaxNameLength);
         maxValueLength = Math.max(maxValueLength, currentMaxValueLength);
 
-        String template = "%-" + (maxNameLength + 1) + "s %"+ maxValueLength +"s";
+        String template = "%-" + (maxNameLength + 1) + "s %" + maxValueLength + "s";
 
         for (Item item : items) {
             ImGui.text(String.format(template, item.name + ":", item.value));

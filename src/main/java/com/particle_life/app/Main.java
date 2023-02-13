@@ -56,7 +56,7 @@ public class Main extends App {
     private boolean autoDt = true;
     private double fallbackDt = 0.02;
     private PhysicsSnapshot physicsSnapshot;
-    private LoadDistributor physicsSnapshotLoadDistributor = new LoadDistributor();  // speed up taking snapshots with parallelization
+    private final LoadDistributor physicsSnapshotLoadDistributor = new LoadDistributor();  // speed up taking snapshots with parallelization
     public AtomicBoolean newSnapshotAvailable = new AtomicBoolean(false);
 
     // local copy of snapshot:
@@ -95,7 +95,7 @@ public class Main extends App {
     private float guiBackgroundAlpha = 1.0f;
 
     // GUI: constants that control how the GUI behaves
-    private long physicsNotReactingThreshold = 3000;// time in milliseconds
+    private long physicsNotReactingThreshold = 3000;  // time in milliseconds
     private double matrixGuiStepSize = 0.2;
     private int typeCountDiagramStepSize = 500;
     private boolean typeCountDisplayPercentage = false;

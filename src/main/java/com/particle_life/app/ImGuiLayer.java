@@ -231,6 +231,7 @@ public class ImGuiLayer {
 
     /**
      * scale everything to a readable size
+     *
      * @param scaleFactor 1.0 for original size
      */
     public void scaleGui(float scaleFactor) {

@@ -6,6 +6,7 @@ public final class ImGuiUtils {
 
     /**
      * Helper to display a little (?) mark which shows a tooltip when hovered.
+     *
      * @param text will be displayed as tooltip when hovered
      */
     public static void helpMarker(String text) {
@@ -14,8 +15,9 @@ public final class ImGuiUtils {
 
     /**
      * Helper to display disabled text which shows a tooltip when hovered.
+     *
      * @param label will always be displayed
-     * @param text will be displayed as tooltip when hovered
+     * @param text  will be displayed as tooltip when hovered
      */
     public static void helpMarker(String label, String text) {
         ImGui.textDisabled(label);

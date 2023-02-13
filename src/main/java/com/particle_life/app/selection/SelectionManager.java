@@ -15,7 +15,7 @@ public class SelectionManager<T> {
         List<InfoWrapper<T>> newItems = provider.create();
         if (newItems.isEmpty()) {
             throw new RuntimeException("SelectionManager %s was initialized with zero items."
-                .formatted(this.getClass().getName()));
+                    .formatted(this.getClass().getName()));
         }
         addAll(newItems);
     }
@@ -65,6 +65,7 @@ public class SelectionManager<T> {
      * This is done in a circular manner, meaning that stepping over
      * the end of the selection results in coming out at the beginning,
      * and vice-versa.
+     *
      * @param step how many steps to move from the current active element
      *             (positive: forward, negative: backward)
      */
@@ -118,6 +119,7 @@ public class SelectionManager<T> {
     /**
      * Returns the index of the first element whose name is equal to the given string.
      * If no such element can be found, -1 is returned.
+     *
      * @param name the name of the item
      * @return the index of the first element with that name, or -1
      */
