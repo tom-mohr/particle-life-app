@@ -2,7 +2,6 @@ package com.particle_life.app.selection;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 
 public class SelectionManager<T> {

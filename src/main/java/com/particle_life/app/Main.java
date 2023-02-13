@@ -22,11 +22,6 @@ import org.joml.Matrix4d;
 import org.joml.Vector2d;
 import org.joml.Vector3d;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferInt;
-import java.io.IOException;
-import java.net.URL;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -109,8 +104,6 @@ public class Main extends App {
     // GUI: hide / show parts
     private final ImBoolean showGui = new ImBoolean(true);
     private boolean advancedGui = false;
-    private boolean showImportWindow = false;
-    private boolean showExportWindow = false;
     private final ImBoolean showStyleEditor = new ImBoolean(false);
     private final ImBoolean showAcceleratorEditor = new ImBoolean(false);
     private final ImBoolean showSettings = new ImBoolean(false);
@@ -118,8 +111,6 @@ public class Main extends App {
     private final ImBoolean showAboutWindow = new ImBoolean(false);
 
     // GUI: store data on the current state of the GUI
-    private final ExportSettings exportSettings = new ExportSettings();
-    private final ImportSettings importSettings = new ImportSettings();
     private InfoWrapper<AcceleratorCodeData> editingAccelerator = null;
     private final ImString textInputAcceleratorCodeImports = new ImString();
     private final ImString textInputAcceleratorCodeMethodCode = new ImString();
@@ -376,7 +367,6 @@ public class Main extends App {
                                     (type, newValue) -> {
                                         final int[] newTypeCount = Arrays.copyOf(physicsSnapshot.typeCount, physicsSnapshot.typeCount.length);
                                         newTypeCount[type] = newValue;
-//                                        loop.enqueue(() -> physics.settings.n = Arrays.stream(newTypeCount).sum());
                                         loop.enqueue(() -> physics.setTypeCount(newTypeCount));
                                     },
                                     typeCountDisplayPercentage
@@ -607,74 +597,6 @@ public class Main extends App {
                 ImGui.popItemWidth();
             }
             ImGui.end();
-        }
-
-        // EXPORT
-        if (showExportWindow && showGui.get()) ImGui.openPopup("Export");
-        if (ImGui.beginPopupModal("Export")) {
-
-            ImGui.text("Choose what you want to export:");
-
-            if (ImGui.checkbox("Particles", exportSettings.particles)) {
-                exportSettings.particles ^= true;
-            }
-            if (exportSettings.particles) {
-                ImGui.sameLine();
-                ImGui.textDisabled(particleCount + " particles");
-            }
-
-            if (ImGui.checkbox("matrix", exportSettings.matrix)) {
-                exportSettings.matrix ^= true;
-            }
-            if (exportSettings.matrix) {
-                ImGui.sameLine();
-                ImGui.textDisabled("size " + settings.matrix.size());
-            }
-
-            if (ImGui.checkbox("time step", exportSettings.timeStep)) {
-                exportSettings.timeStep ^= true;
-            }
-            if (exportSettings.timeStep) {
-                ImGui.sameLine();
-                ImGui.textDisabled("%.1f ms".formatted(fallbackDt * 1000));
-            }
-
-            if (ImGui.button("Cancel")) {
-                ImGui.closeCurrentPopup();
-                showExportWindow = false;
-            }
-            ImGui.sameLine();
-            if (ImGui.button("Export")) {
-                exportData();
-                ImGui.closeCurrentPopup();
-                showExportWindow = false;
-            }
-            ImGui.endPopup();
-        }
-
-        // IMPORT
-        if (showImportWindow && showGui.get()) ImGui.openPopup("Import");
-        if (ImGui.beginPopupModal("Import")) {
-            ImGui.text("Import this and that...");
-
-            ImGui.textDisabled(importSettings.path);
-
-            ImString inputString = new ImString(importSettings.path);
-            if (ImGui.inputText("Path", inputString, ImGuiInputTextFlags.EnterReturnsTrue)) {
-                importSettings.path = inputString.get();
-            }
-
-            if (ImGui.button("Cancel")) {
-                ImGui.closeCurrentPopup();
-                showImportWindow = false;
-            }
-            ImGui.sameLine();
-            if (ImGui.button("Import")) {
-                importData();
-                ImGui.closeCurrentPopup();
-                showImportWindow = false;
-            }
-            ImGui.endPopup();
         }
 
         // PHYSICS NOT REACTING
@@ -927,50 +849,8 @@ public class Main extends App {
         }
     }
 
-    private void setInitialExportSettings() {
-        exportSettings.timeStep = !autoDt;
-    }
-
-    private void exportData() {
-
-        //todo: this is just a demo
-
-        System.out.println("Now exporting...");
-
-        if (exportSettings.particles) {
-            System.out.println("- particles");
-        }
-
-        if (exportSettings.matrix) {
-            System.out.println("- matrix");
-        }
-
-        if (exportSettings.timeStep) {
-            System.out.println("- time step");
-        }
-    }
-
-    private void importData() {
-        System.out.println("Now importing...");
-
-        if (exportSettings.timeStep) {
-            System.out.println("- path: " + importSettings.path);
-        }
-    }
-
     private void buildMainMenu() {
         if (ImGui.beginMenu("Main")) {
-            //todo: implement import/export
-//            if (ImGui.menuItem("Import..", "Str+O")) {
-//                //todo show file dialog
-//                //     importSettings.path = ...
-//                showImportWindow = true;
-//            }
-//
-//            if (ImGui.menuItem("Export..", "Str+S")) {
-//                showExportWindow = true;
-//                setInitialExportSettings();
-//            }
 
             if (ImGui.menuItem("Settings..")) {
                 showSettings.set(true);
@@ -1094,21 +974,6 @@ public class Main extends App {
         } else {
             return (int) Math.floor(minDetailSize + (particleSizeOnScreen - minDetailSize) * detailPerSize);
         }
-    }
-
-    private void textureTest() throws IOException {
-//        URL url = ClassLoader.getSystemClassLoader().getResourceAsStream();
-        String filename = "textures/particle.png";
-        URL url = ClassLoader.getSystemClassLoader().getResource(filename);
-        System.out.println(url);
-        BufferedImage img = ImageIO.read(url);
-        int imgWidth = img.getWidth();
-        int imgHeight = img.getHeight();
-        int[] pixels = ((DataBufferInt) img.getData().getDataBuffer()).getData();
-        System.out.println(pixels.length);
-//        int texture = glGenTextures();
-//        glBindTexture(GL_TEXTURE_2D, texture);
-//        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGBA, GL_INT, pixels);
     }
 
     @Override

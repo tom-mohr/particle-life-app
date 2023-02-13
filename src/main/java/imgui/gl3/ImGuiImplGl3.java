@@ -1,14 +1,8 @@
 package imgui.gl3;
 
-import com.particle_life.app.Main;
-import imgui.ImDrawData;
-import imgui.ImFontAtlas;
-import imgui.ImGui;
-import imgui.ImGuiIO;
-import imgui.type.ImInt;
-import imgui.ImVec2;
-import imgui.ImVec4;
+import imgui.*;
 import imgui.flag.ImGuiBackendFlags;
+import imgui.type.ImInt;
 
 import java.nio.ByteBuffer;
 import java.util.regex.Matcher;

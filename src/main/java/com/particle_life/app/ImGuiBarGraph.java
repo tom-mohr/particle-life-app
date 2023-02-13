@@ -36,7 +36,7 @@ class ImGuiBarGraph {
         int total = Arrays.stream(typeCount).sum();
         int maxCount = Arrays.stream(typeCount).max().orElse(0);
         ImVec2 maxCountTextSize = new ImVec2();
-        ImGui.calcTextSize(maxCountTextSize, formatText(maxCount, maxCount, total, percentage));
+        ImGui.calcTextSize(maxCountTextSize, formatText(maxCount, total, percentage));
         float spaceBeforeText = 2;
         float spaceAfterText = 2;
         boolean renderText = maxCountTextSize.y < barHeight;
@@ -60,7 +60,7 @@ class ImGuiBarGraph {
 
             if (renderText) {
                 ImGui.setCursorPos(x + barWidth + spaceBeforeText, y + (barHeight - maxCountTextSize.y) / 2);
-                ImGui.text(formatText(count, maxCount, total, percentage));
+                ImGui.text(formatText(count, total, percentage));
                 ImGui.setCursorPos(cursor.x, cursor.y);
             }
 
@@ -101,7 +101,7 @@ class ImGuiBarGraph {
         return hovering ? typeHovering : -1;
     }
 
-    private static String formatText(int count, int maxCount, int total, boolean percentage) {
+    private static String formatText(int count, int total, boolean percentage) {
         if (percentage) {
             return "%.0f%%".formatted(total != 0 ? 100 * count / (double) total : 0);
         } else {

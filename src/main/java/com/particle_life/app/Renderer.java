@@ -8,7 +8,8 @@ import org.joml.Matrix4d;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL15.*;
-import static org.lwjgl.opengl.GL20.*;
+import static org.lwjgl.opengl.GL20.glEnableVertexAttribArray;
+import static org.lwjgl.opengl.GL20.glVertexAttribPointer;
 import static org.lwjgl.opengl.GL30.*;
 
 class Renderer {
@@ -21,6 +22,9 @@ class Renderer {
     public ParticleShader particleShader = null;
     public boolean drawCursor = false;
     private final ImGuiImplGl3 imGuiGl3 = new ImGuiImplGl3();
+    /**
+     * Remember the last buffered size in order to use subBufferData instead of bufferData whenever possible.
+     */
     private int lastBufferedSize = -1;
     private int lastShaderProgram = -1;
 

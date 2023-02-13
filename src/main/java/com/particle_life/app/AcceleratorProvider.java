@@ -1,8 +1,8 @@
 package com.particle_life.app;
 
+import com.particle_life.Accelerator;
 import com.particle_life.app.selection.InfoWrapper;
 import com.particle_life.app.selection.InfoWrapperProvider;
-import com.particle_life.Accelerator;
 import org.joml.Vector3d;
 
 import java.util.List;

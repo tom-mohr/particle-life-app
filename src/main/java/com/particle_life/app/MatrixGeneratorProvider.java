@@ -1,10 +1,10 @@
 package com.particle_life.app;
 
-import com.particle_life.app.selection.InfoWrapper;
-import com.particle_life.app.selection.InfoWrapperProvider;
 import com.particle_life.DefaultMatrix;
 import com.particle_life.DefaultMatrixGenerator;
 import com.particle_life.MatrixGenerator;
+import com.particle_life.app.selection.InfoWrapper;
+import com.particle_life.app.selection.InfoWrapperProvider;
 
 import java.util.List;
 

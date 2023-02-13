@@ -1,11 +1,9 @@
 package com.particle_life.app.shaders;
 
 import com.particle_life.app.color.Color;
-import com.particle_life.app.io.ResourceAccess;
 import org.joml.Matrix4d;
 
 import static org.lwjgl.opengl.GL20.*;
-import static org.lwjgl.opengl.GL32.GL_GEOMETRY_SHADER;
 
 /**
  * Represents data about a particle shader.
@@ -26,11 +24,6 @@ public class ParticleShader {
     public final int xAttribLocation;
     public final int vAttribLocation;
     public final int typeAttribLocation;
-
-    /**
-     * Remember the last buffered size in order to use subBufferData instead of bufferData whenever possible.
-     */
-    private int lastBufferedSize = -1;
 
     private final float[] transform = new float[16];
 
