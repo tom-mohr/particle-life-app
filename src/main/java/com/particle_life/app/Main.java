@@ -898,10 +898,10 @@ public class Main extends App {
                     showGui.set(!showGui.get());
                 }
             }
-            case "l" -> selectionStep(palettes, 1);
-            case "L" -> selectionStep(palettes, -1);
-            case "s" -> selectionStep(shaders, 1);
-            case "S" -> selectionStep(shaders, -1);
+            case "l" -> palettes.stepForward();
+            case "L" -> palettes.stepBackward();
+            case "s" -> shaders.stepForward();
+            case "S" -> shaders.stepBackward();
             case "+" -> zoomGoal *= Math.pow(zoomStepFactor, 2);// more steps than when scrolling
             case "-" -> zoomGoal /= Math.pow(zoomStepFactor, 2);
             case "z" -> resetCamera(true);
@@ -921,32 +921,32 @@ public class Main extends App {
             case "w" -> loop.enqueue(() -> physics.settings.wrap ^= true);
             case " " -> loop.pause ^= true;
             case "v" -> {
-                selectionStep(accelerators, 1);
+                accelerators.stepForward();
                 final Accelerator nextAccelerator = accelerators.getActive();
                 loop.enqueue(() -> physics.accelerator = nextAccelerator);
             }
             case "V" -> {
-                selectionStep(accelerators, -1);
+                accelerators.stepBackward();
                 final Accelerator nextAccelerator = accelerators.getActive();
                 loop.enqueue(() -> physics.accelerator = nextAccelerator);
             }
             case "x" -> {
-                selectionStep(positionSetters, 1);
+                positionSetters.stepForward();
                 final PositionSetter nextPositionSetter = positionSetters.getActive();
                 loop.enqueue(() -> physics.positionSetter = nextPositionSetter);
             }
             case "X" -> {
-                selectionStep(positionSetters, -1);
+                positionSetters.stepBackward();
                 final PositionSetter nextPositionSetter = positionSetters.getActive();
                 loop.enqueue(() -> physics.positionSetter = nextPositionSetter);
             }
             case "r" -> {
-                selectionStep(matrixGenerators, 1);
+                matrixGenerators.stepForward();
                 final MatrixGenerator nextMatrixGenerator = matrixGenerators.getActive();
                 loop.enqueue(() -> physics.matrixGenerator = nextMatrixGenerator);
             }
             case "R" -> {
-                selectionStep(matrixGenerators, -1);
+                matrixGenerators.stepBackward();
                 final MatrixGenerator nextMatrixGenerator = matrixGenerators.getActive();
                 loop.enqueue(() -> physics.matrixGenerator = nextMatrixGenerator);
             }
@@ -965,10 +965,6 @@ public class Main extends App {
             case "LEFT_CONTROL" -> leftControlPressed = false;
             case "RIGHT_CONTROL" -> rightControlPressed = false;
         }
-    }
-
-    private void selectionStep(SelectionManager<?> selectionManager, int step) {
-        selectionManager.setActive(MathUtils.modulo(selectionManager.getActiveIndex() + step, selectionManager.size()));
     }
 
     @Override

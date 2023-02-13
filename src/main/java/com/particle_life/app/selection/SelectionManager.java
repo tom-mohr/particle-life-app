@@ -1,5 +1,7 @@
 package com.particle_life.app.selection;
 
+import com.particle_life.app.MathUtils;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -56,6 +58,26 @@ public class SelectionManager<T> {
             activeIndex = i;
             onActiveChanged();
         }
+    }
+
+    /**
+     * Change the active element by going the given number of steps forward.
+     * This is done in a circular manner, meaning that stepping over
+     * the end of the selection results in coming out at the beginning,
+     * and vice-versa.
+     * @param step how many steps to move from the current active element
+     *             (positive: forward, negative: backward)
+     */
+    public void step(int step) {
+        setActive(MathUtils.modulo(getActiveIndex() + step, items.size()));
+    }
+
+    public void stepForward() {
+        step(1);
+    }
+
+    public void stepBackward() {
+        step(-1);
     }
 
     /**
