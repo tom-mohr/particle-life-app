@@ -364,8 +364,6 @@ public class Main extends App {
                                     },
                                     typeCountDisplayPercentage
                             );
-                            ImGui.sameLine();
-                            ImGuiUtils.advancedGuiHint();
 
                             if (ImGui.button("equalize type count")) {
                                 loop.enqueue(() -> physics.setTypeCountEqual());
@@ -678,8 +676,6 @@ public class Main extends App {
 
                 {
                     ImGui.text("Type Count Diagram:");
-                    ImGui.sameLine();
-                    ImGuiUtils.advancedGuiHint();
 
                     ImGui.indent();
 

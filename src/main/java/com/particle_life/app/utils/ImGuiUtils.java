@@ -14,11 +14,11 @@ public final class ImGuiUtils {
 
     /**
      * Helper to display disabled text which shows a tooltip when hovered.
-     * @param title will always be displayed
+     * @param label will always be displayed
      * @param text will be displayed as tooltip when hovered
      */
-    public static void helpMarker(String title, String text) {
-        ImGui.textDisabled(title);
+    public static void helpMarker(String label, String text) {
+        ImGui.textDisabled(label);
         if (ImGui.isItemHovered()) {
             ImGui.beginTooltip();
             ImGui.pushTextWrapPos(ImGui.getFontSize() * 35.0f);
@@ -26,9 +26,5 @@ public final class ImGuiUtils {
             ImGui.popTextWrapPos();
             ImGui.endTooltip();
         }
-    }
-
-    public static void advancedGuiHint() {
-        helpMarker("[Advanced GUI]", "Some options are only visible if \"Advanced GUI\" is activated. The \"Advanced GUI\" can be enabled via Menu > View > Advanced GUI.");
     }
 }
