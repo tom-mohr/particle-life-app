@@ -1,6 +1,6 @@
 package com.particle_life.app.selection;
 
-import com.particle_life.app.MathUtils;
+import com.particle_life.app.utils.MathUtils;
 
 import java.util.ArrayList;
 import java.util.Collection;

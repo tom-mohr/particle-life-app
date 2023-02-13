@@ -2,6 +2,7 @@ package com.particle_life.app;
 
 import com.particle_life.app.color.Color;
 import com.particle_life.app.color.Palette;
+import com.particle_life.app.utils.ImGuiUtils;
 import imgui.ImDrawList;
 import imgui.ImGui;
 import imgui.ImVec2;

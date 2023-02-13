@@ -1,4 +1,4 @@
-package com.particle_life.app;
+package com.particle_life.app.utils;
 
 public final class MathUtils {
 

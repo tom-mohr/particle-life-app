@@ -8,6 +8,8 @@ import com.particle_life.app.cursors.*;
 import com.particle_life.app.selection.SelectionManager;
 import com.particle_life.app.shaders.ParticleShader;
 import com.particle_life.app.shaders.ShaderProvider;
+import com.particle_life.app.utils.ImGuiUtils;
+import com.particle_life.app.utils.MathUtils;
 import imgui.ImGui;
 import imgui.flag.ImGuiCond;
 import imgui.flag.ImGuiInputTextFlags;

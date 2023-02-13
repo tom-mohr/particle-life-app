@@ -1,6 +1,7 @@
 package com.particle_life.app;
 
 import com.particle_life.*;
+import com.particle_life.app.utils.ArrayUtils;
 
 import java.util.Arrays;
 import java.util.Collections;

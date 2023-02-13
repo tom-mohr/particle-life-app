@@ -1,6 +1,6 @@
-package com.particle_life.app;
+package com.particle_life.app.utils;
 
-final class ArrayUtils {
+public final class ArrayUtils {
 
     public static void swap(Object[] array, int i, int j) {//todo move to utility class
         Object h = array[i];

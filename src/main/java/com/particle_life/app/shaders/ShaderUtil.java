@@ -5,7 +5,7 @@ import com.particle_life.app.io.ResourceAccess;
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL32.GL_GEOMETRY_SHADER;
 
-public final class ShaderUtil {
+final class ShaderUtil {
 
     public static int makeShaderProgram(String vertexShaderResource, String geometryShaderResource, String fragmentShaderResource) {
         int program = glCreateProgram();
