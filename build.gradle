@@ -87,7 +87,6 @@ tasks.register('zipApp', Zip) {
 }
 
 group 'com.particle.life.app'
-version '1.0.0'
 
 ext {
     lwjglVersion = '3.3.0'
