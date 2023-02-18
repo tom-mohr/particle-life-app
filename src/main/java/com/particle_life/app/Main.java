@@ -730,7 +730,8 @@ public class Main extends App {
                         [F11]: toggle full screen
                         [ALT]+[F4]: quit
                                                 
-                        [+]/[-]: zoom
+                        [+]/[=]: zoom in
+                        [-]: zoom out
                         [z]: reset zoom
                         [Z]: reset zoom (fit window)
                                                 
@@ -901,7 +902,7 @@ public class Main extends App {
             case "L" -> palettes.stepBackward();
             case "s" -> shaders.stepForward();
             case "S" -> shaders.stepBackward();
-            case "+" -> zoomGoal *= Math.pow(zoomStepFactor, 2);// more steps than when scrolling
+            case "+", "=" -> zoomGoal *= Math.pow(zoomStepFactor, 2);// more steps than when scrolling
             case "-" -> zoomGoal = Math.max(MIN_ZOOM, zoomGoal / Math.pow(zoomStepFactor, 2));
             case "z" -> resetCamera(true);
             case "Z" -> {
