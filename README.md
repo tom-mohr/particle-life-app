@@ -3,7 +3,7 @@
 A GUI for the [Particle Life Framework](https://github.com/tom-mohr/particle-life).
 
 - [Download](https://particle-life.com)
-- [Documentation](https://particle-life.com/app/docs)
+- [Documentation](https://particle-life.com/docs)
 
 Join the [Discord server](https://discord.gg/Fd64AhKzMD)!
 
