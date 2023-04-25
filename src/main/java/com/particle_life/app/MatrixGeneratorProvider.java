@@ -75,7 +75,6 @@ class MatrixGeneratorProvider implements InfoWrapperProvider<MatrixGenerator> {
                     }
                     return m;
                 }),
-                new InfoWrapper<>("zero", DefaultMatrix::new)
-        );
+                new InfoWrapper<>("zero", DefaultMatrix::new));
     }
 }

@@ -1,11 +1,14 @@
 package com.particle_life.app;
 
 import com.particle_life.Clock;
+import com.particle_life.app.cursors.ImageClass;
+
 import org.lwjgl.Version;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryStack;
+import org.lwjgl.glfw.GLFWImage;
 
 import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
 import static org.lwjgl.glfw.GLFW.*;
@@ -89,6 +92,8 @@ public abstract class App {
         imGuiLayer.destroyImGui();
     }
 
+    private final ImageClass icon_file = ImageClass.loadImage("favicon.png");
+
     private void init(String title, boolean fullscreen) {
         // Setup an error callback. The default implementation
         // will print the error message in System.err.
@@ -107,7 +112,8 @@ public abstract class App {
         // Create the window
         long monitor = glfwGetPrimaryMonitor();
         GLFWVidMode videoMode = glfwGetVideoMode(monitor);
-        if (videoMode == null) throw new RuntimeException("glfwGetVideoMode() returned null");
+        if (videoMode == null)
+            throw new RuntimeException("glfwGetVideoMode() returned null");
         int monitorWidth = videoMode.width();
         int monitorHeight = videoMode.height();
 
@@ -128,7 +134,8 @@ public abstract class App {
             window = glfwCreateWindow(width, height, title, NULL, NULL);
         }
 
-        if (window == NULL) throw new RuntimeException("Failed to create the GLFW window");
+        if (window == NULL)
+            throw new RuntimeException("Failed to create the GLFW window");
 
         // Get the thread stack and push a new frame
         try (MemoryStack stack = stackPush()) {
@@ -142,21 +149,31 @@ public abstract class App {
         // Make the OpenGL context current
         glfwMakeContextCurrent(window);
 
-        glfwSwapInterval(1);  // Enable v-sync
+        glfwSwapInterval(1); // Enable v-sync
 
         // Make the window visible
         glfwShowWindow(window);
+
+        // Adding the application icon [converted .ico -> .png]
+        GLFWImage image = GLFWImage.malloc();
+        GLFWImage.Buffer imagebf = GLFWImage.malloc(1);
+        image.set(icon_file.getWidth(), icon_file.getHeight(),
+                icon_file.getImage());
+        imagebf.put(0, image);
+        glfwSetWindowIcon(window, imagebf);
+
     }
 
     private void setCallbacks(ImGuiLayer imGuiLayer) {
         glfwSetWindowSizeCallback(window, (window1, newWidth, newHeight) -> {
-            //todo: use fame buffer size or window size?
-//            System.out.printf("window size changed: %d %d%n", newWidth, newHeight);
+            // todo: use fame buffer size or window size?
+            // System.out.printf("window size changed: %d %d%n", newWidth, newHeight);
 
-//            int[] frameBufferWidth = new int[1];
-//            int[] frameBufferHeight = new int[1];
-//            glfwGetFramebufferSize(window, frameBufferWidth, frameBufferHeight);
-//            System.out.printf("frame buffer size: %d, %d%n", frameBufferWidth[0], frameBufferHeight[0]);
+            // int[] frameBufferWidth = new int[1];
+            // int[] frameBufferHeight = new int[1];
+            // glfwGetFramebufferSize(window, frameBufferWidth, frameBufferHeight);
+            // System.out.printf("frame buffer size: %d, %d%n", frameBufferWidth[0],
+            // frameBufferHeight[0]);
 
             width = newWidth;
             height = newHeight;
@@ -214,9 +231,10 @@ public abstract class App {
     }
 
     protected void setFullscreen(boolean fullscreen) {
-        //todo: this could create problems with multi threading
+        // todo: this could create problems with multi threading
 
-        if (isFullscreen() == fullscreen) return;
+        if (isFullscreen() == fullscreen)
+            return;
 
         if (fullscreen) {
             // make fullscreen
@@ -242,7 +260,7 @@ public abstract class App {
             height = videoMode.height();
             glfwSetWindowMonitor(window, monitor, 0, 0, width, height, GLFW_DONT_CARE);
 
-            glfwSwapInterval(1);  // Enable v-sync
+            glfwSwapInterval(1); // Enable v-sync
 
         } else {
             // restore last window size and position
@@ -250,7 +268,7 @@ public abstract class App {
             height = windowHeight;
             glfwSetWindowMonitor(window, NULL, windowPosX, windowPosY, width, height, GLFW_DONT_CARE);
 
-            glfwSwapInterval(1);  // Enable v-sync
+            glfwSwapInterval(1); // Enable v-sync
         }
     }
 

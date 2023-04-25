@@ -64,7 +64,8 @@ public class Main extends App {
     private boolean autoDt = true;
     private double fallbackDt = 0.02;
     private PhysicsSnapshot physicsSnapshot;
-    private LoadDistributor physicsSnapshotLoadDistributor = new LoadDistributor();  // speed up taking snapshots with parallelization
+    private LoadDistributor physicsSnapshotLoadDistributor = new LoadDistributor(); // speed up taking snapshots with
+                                                                                    // parallelization
     public AtomicBoolean newSnapshotAvailable = new AtomicBoolean(false);
 
     // local copy of snapshot:
@@ -75,7 +76,7 @@ public class Main extends App {
 
     // particle rendering: constants
     private double zoomStepFactor = 1.2;
-    private float particleSize = 4.0f;   // particle size on screen (in pixels)
+    private float particleSize = 4.0f; // particle size on screen (in pixels)
     private boolean keepParticleSizeIndependentOfZoom = false;
     private double shiftSmoothness = 0.3;
     private double zoomSmoothness = 0.3;
@@ -201,35 +202,39 @@ public class Main extends App {
         if (draggingShift) {
 
             shift.set(coordinates
-                    .mouseShift(new Vector2d(pmouseX, pmouseY), new Vector2d(mouseX, mouseY))
-                    .shift);
-            shiftGoal.set(shift);  // don't use smoothing while dragging
+                    .mouseShift(new Vector2d(pmouseX, pmouseY), new Vector2d(mouseX, mouseY)).shift);
+            shiftGoal.set(shift); // don't use smoothing while dragging
         }
 
         double camMovementStepSize = camMovementSpeed / zoom;
-        camMovementStepSize *= renderClock.getDtMillis() / 1000.0;  // keep constant speed regardless of framerate
-        if (leftPressed) shiftGoal.add(camMovementStepSize, 0.0, 0.0);
-        if (rightPressed) shiftGoal.add(-camMovementStepSize, 0.0, 0.0);
-        if (upPressed) shiftGoal.add(0.0, camMovementStepSize, 0.0);
-        if (downPressed) shiftGoal.add(0.0, -camMovementStepSize, 0.0);
+        camMovementStepSize *= renderClock.getDtMillis() / 1000.0; // keep constant speed regardless of framerate
+        if (leftPressed)
+            shiftGoal.add(camMovementStepSize, 0.0, 0.0);
+        if (rightPressed)
+            shiftGoal.add(-camMovementStepSize, 0.0, 0.0);
+        if (upPressed)
+            shiftGoal.add(0.0, camMovementStepSize, 0.0);
+        if (downPressed)
+            shiftGoal.add(0.0, -camMovementStepSize, 0.0);
 
         shift.lerp(shiftGoal, shiftSmoothness);
         zoom = MathUtils.lerp(zoom, zoomGoal, zoomSmoothness);
 
         if (draggingParticles) {
 
-            final Cursor cursorCopy = cursors.getActive().object.copy();  // need to copy for async access in loop.enqueue()
+            final Cursor cursorCopy = cursors.getActive().object.copy(); // need to copy for async access in
+                                                                         // loop.enqueue()
             // execute cursor action
             switch (cursorActions.getActive().object) {
                 case MOVE:
-                    final Vector3d wPrev = coordinates.world(pmouseX, pmouseY);  // where the dragging started
-                    final Vector3d wNew = coordinates.world(mouseX, mouseY);  // where the dragging ended
-                    final Vector3d delta = wNew.sub(wPrev);  // dragged distance
-                    cursorCopy.setPosition(wPrev.x, wPrev.y);  // set cursor to start of dragging
+                    final Vector3d wPrev = coordinates.world(pmouseX, pmouseY); // where the dragging started
+                    final Vector3d wNew = coordinates.world(mouseX, mouseY); // where the dragging ended
+                    final Vector3d delta = wNew.sub(wPrev); // dragged distance
+                    cursorCopy.setPosition(wPrev.x, wPrev.y); // set cursor to start of dragging
                     loop.enqueue(() -> {
                         for (Particle p : cursorCopy.getSelection(physics)) {
                             p.position.add(delta);
-                            physics.ensurePosition(p.position);  // wrap or clamp
+                            physics.ensurePosition(p.position); // wrap or clamp
                         }
                     });
                     break;
@@ -246,8 +251,7 @@ public class Main extends App {
                                     particle.position,
                                     particle.velocity,
                                     particle.type,
-                                    physics.settings.matrix.size()
-                            );
+                                    physics.settings.matrix.size());
                             physics.particles[prevLength + i] = particle;
                         }
                     });
@@ -262,24 +266,25 @@ public class Main extends App {
                                 j++;
                             }
                         }
-                        physics.particles = Arrays.copyOf(newParticles, j);  // cut to correct length
+                        physics.particles = Arrays.copyOf(newParticles, j); // cut to correct length
                     });
                     break;
             }
         }
 
-        renderer.particleShader = shaders.getActive().object;  // need to assign a shader before buffering particle data
+        renderer.particleShader = shaders.getActive().object; // need to assign a shader before buffering particle data
 
         if (newSnapshotAvailable.get()) {
 
             // get local copy of snapshot
 
-            //todo: only write types if necessary?
+            // todo: only write types if necessary?
             renderer.bufferParticleData(physicsSnapshot.positions, physicsSnapshot.velocities, physicsSnapshot.types);
             settings = physicsSnapshot.settings.deepCopy();
             particleCount = physicsSnapshot.particleCount;
             preferredNumberOfThreads = physics.preferredNumberOfThreads;
-            // todo: make this in a clean async way: cursorParticleCount = cursors.getActive().object.getSelection(physics).size();
+            // todo: make this in a clean async way: cursorParticleCount =
+            // cursors.getActive().object.getSelection(physics).size();
 
             newSnapshotAvailable.set(false);
         }
@@ -309,9 +314,10 @@ public class Main extends App {
 
         setShaderVariables();
 
-        if (!traces || !tracesBefore) renderer.clear();
+        if (!traces || !tracesBefore)
+            renderer.clear();
         tracesBefore = traces;
-        renderer.run(cursor, ImGui.getDrawData(), width, height);  // draw particles and GUI
+        renderer.run(cursor, ImGui.getDrawData(), width, height); // draw particles and GUI
     }
 
     private void buildGui() {
@@ -337,10 +343,15 @@ public class Main extends App {
                 {
                     statsFormatter.start();
                     statsFormatter.put("Graphics FPS", String.format("%.0f", renderClock.getAvgFramerate()));
-                    statsFormatter.put("Physics FPS", loop.getAvgFramerate() < 100000 ? String.format("%.0f", loop.getAvgFramerate()) : "inf");
+                    statsFormatter.put("Physics FPS",
+                            loop.getAvgFramerate() < 100000 ? String.format("%.0f", loop.getAvgFramerate()) : "inf");
                     if (advancedGui) {
-                        statsFormatter.put("Physics vs. Graphics", loop.getAvgFramerate() < 100000 ? String.format("%.2f", loop.getAvgFramerate() / renderClock.getAvgFramerate()) : "inf");
-                        //todo display when functional: statsFormatter.put("Particles in Cursor", String.valueOf(cursorParticleCount));
+                        statsFormatter.put("Physics vs. Graphics",
+                                loop.getAvgFramerate() < 100000
+                                        ? String.format("%.2f", loop.getAvgFramerate() / renderClock.getAvgFramerate())
+                                        : "inf");
+                        // todo display when functional: statsFormatter.put("Particles in Cursor",
+                        // String.valueOf(cursorParticleCount));
                     }
                     statsFormatter.end();
                 }
@@ -352,7 +363,8 @@ public class Main extends App {
 
                     // N
                     ImInt particleCountInput = new ImInt(particleCount);
-                    if (ImGui.inputInt("particle count", particleCountInput, 1000, 1000, ImGuiInputTextFlags.EnterReturnsTrue)) {
+                    if (ImGui.inputInt("particle count", particleCountInput, 1000, 1000,
+                            ImGuiInputTextFlags.EnterReturnsTrue)) {
                         final int newCount = Math.max(0, particleCountInput.get());
                         loop.enqueue(() -> physics.setParticleCount(newCount));
                     }
@@ -375,13 +387,13 @@ public class Main extends App {
                                     typeCountDiagramStepSize,
                                     physicsSnapshot.typeCount,
                                     (type, newValue) -> {
-                                        final int[] newTypeCount = Arrays.copyOf(physicsSnapshot.typeCount, physicsSnapshot.typeCount.length);
+                                        final int[] newTypeCount = Arrays.copyOf(physicsSnapshot.typeCount,
+                                                physicsSnapshot.typeCount.length);
                                         newTypeCount[type] = newValue;
-//                                        loop.enqueue(() -> physics.settings.n = Arrays.stream(newTypeCount).sum());
+                                        // loop.enqueue(() -> physics.settings.n = Arrays.stream(newTypeCount).sum());
                                         loop.enqueue(() -> physics.setTypeCount(newTypeCount));
                                     },
-                                    typeCountDisplayPercentage
-                            );
+                                    typeCountDisplayPercentage);
                             ImGui.sameLine();
                             ImGuiUtils.advancedGuiHint();
 
@@ -395,8 +407,7 @@ public class Main extends App {
                                 palettes.getActive().object,
                                 matrixGuiStepSize,
                                 settings.matrix,
-                                (i, j, newValue) -> loop.enqueue(() -> physics.settings.matrix.set(i, j, newValue))
-                        );
+                                (i, j, newValue) -> loop.enqueue(() -> physics.settings.matrix.set(i, j, newValue)));
 
                         if (advancedGui) {
                             ImGui.text("Clipboard:");
@@ -490,8 +501,7 @@ public class Main extends App {
                                     "",
                                     "ExampleAccelerator",
                                     "return x;",
-                                    null
-                            ));
+                                    null));
                             acceleratorCompiler.clearError();
                         }
                     }
@@ -503,8 +513,9 @@ public class Main extends App {
 
                     {
                         float displayValue = (float) settings.rmax;
-                        float[] rmaxSliderValue = new float[]{displayValue};
-                        if (ImGui.sliderFloat("rmax", rmaxSliderValue, 0.005f, 1.000f, String.format("%.3f", displayValue), ImGuiSliderFlags.Logarithmic)) {
+                        float[] rmaxSliderValue = new float[] { displayValue };
+                        if (ImGui.sliderFloat("rmax", rmaxSliderValue, 0.005f, 1.000f,
+                                String.format("%.3f", displayValue), ImGuiSliderFlags.Logarithmic)) {
                             final float newRmax = rmaxSliderValue[0];
                             loop.enqueue(() -> physics.settings.rmax = newRmax);
                         }
@@ -513,14 +524,15 @@ public class Main extends App {
                     {// FRICTION
                         double secondPart = 10.0;
                         double frictionVal = Math.pow(settings.friction, 1.0 / secondPart);
-                        float[] frictionSliderValue = new float[]{(float) frictionVal};
-                        if (ImGui.sliderFloat("friction", frictionSliderValue, 0.0f, 1.0f, String.format("%.3f / %.1fs", frictionVal, 1.0 / secondPart))) {
+                        float[] frictionSliderValue = new float[] { (float) frictionVal };
+                        if (ImGui.sliderFloat("friction", frictionSliderValue, 0.0f, 1.0f,
+                                String.format("%.3f / %.1fs", frictionVal, 1.0 / secondPart))) {
                             final double newFriction = Math.pow(frictionSliderValue[0], secondPart);
                             loop.enqueue(() -> physics.settings.friction = newFriction);
                         }
                     }
 
-                    float[] forceFactorSliderValue = new float[]{(float) settings.force};
+                    float[] forceFactorSliderValue = new float[] { (float) settings.force };
                     if (ImGui.sliderFloat("force", forceFactorSliderValue, 0.0f, 5.0f)) {
                         final float newForceFactor = forceFactorSliderValue[0];
                         loop.enqueue(() -> physics.settings.force = newForceFactor);
@@ -536,8 +548,9 @@ public class Main extends App {
                             loop.enqueue(() -> physics.preferredNumberOfThreads = newThreadNumber);
                         }
 
-                        float[] dtSliderValue = new float[]{(float) fallbackDt};
-                        if (ImGui.sliderFloat("##dt", dtSliderValue, 0.0f, 0.1f, String.format("%4.1f ms", fallbackDt * 1000.0), ImGuiSliderFlags.Logarithmic)) {
+                        float[] dtSliderValue = new float[] { (float) fallbackDt };
+                        if (ImGui.sliderFloat("##dt", dtSliderValue, 0.0f, 0.1f,
+                                String.format("%4.1f ms", fallbackDt * 1000.0), ImGuiSliderFlags.Logarithmic)) {
                             fallbackDt = dtSliderValue[0];
                         }
                         ImGui.sameLine();
@@ -561,7 +574,7 @@ public class Main extends App {
                     // PALETTES
                     renderCombo("palette [l]", palettes);
 
-                    float[] particleSizeSliderValue = new float[]{particleSize};
+                    float[] particleSizeSliderValue = new float[] { particleSize };
                     if (ImGui.sliderFloat("particle size", particleSizeSliderValue, 0.1f, 10f)) {
                         particleSize = particleSizeSliderValue[0];
                     }
@@ -580,7 +593,7 @@ public class Main extends App {
                             renderer.drawCursor ^= true;
                         }
                         // cursor size slider
-                        float[] cursorSizeSliderValue = new float[]{(float) cursorSize};
+                        float[] cursorSizeSliderValue = new float[] { (float) cursorSize };
                         if (ImGui.sliderFloat("cursor size", cursorSizeSliderValue,
                                 0.001f, 1.000f,
                                 String.format("%.3f", cursorSize),
@@ -589,7 +602,7 @@ public class Main extends App {
                         }
                         if (cursorActions.getActive().object == CursorAction.BRUSH) {
                             // brush power slider
-                            int[] brushPowerSliderValue = new int[]{brushPower};
+                            int[] brushPowerSliderValue = new int[] { brushPower };
                             if (ImGui.sliderInt("brush power", brushPowerSliderValue, 1, 100)) {
                                 brushPower = brushPowerSliderValue[0];
                             }
@@ -604,7 +617,8 @@ public class Main extends App {
         }
 
         // EXPORT
-        if (showExportWindow && showGui.get()) ImGui.openPopup("Export");
+        if (showExportWindow && showGui.get())
+            ImGui.openPopup("Export");
         if (ImGui.beginPopupModal("Export")) {
 
             ImGui.text("Choose what you want to export:");
@@ -647,7 +661,8 @@ public class Main extends App {
         }
 
         // IMPORT
-        if (showImportWindow && showGui.get()) ImGui.openPopup("Import");
+        if (showImportWindow && showGui.get())
+            ImGui.openPopup("Import");
         if (ImGui.beginPopupModal("Import")) {
             ImGui.text("Import this and that...");
 
@@ -674,7 +689,8 @@ public class Main extends App {
         // PHYSICS NOT REACTING
         long physicsNotReactingSince = System.currentTimeMillis() - physicsSnapshot.snapshotTime;
         boolean physicsNotReacting = physicsNotReactingSince > physicsNotReactingThreshold;
-        if (physicsNotReacting) ImGui.openPopup("Not reacting");
+        if (physicsNotReacting)
+            ImGui.openPopup("Not reacting");
         if (ImGui.beginPopupModal("Not reacting")) {
             if (!physicsNotReacting) {
                 ImGui.closeCurrentPopup();
@@ -693,7 +709,7 @@ public class Main extends App {
                     }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
-                    //todo: How should this be handled?
+                    // todo: How should this be handled?
                 }
             }
 
@@ -724,14 +740,14 @@ public class Main extends App {
                     | ImGuiWindowFlags.NoFocusOnAppearing)) {
 
                 {
-                    float[] inputValue = new float[]{(float) camMovementSpeed};
+                    float[] inputValue = new float[] { (float) camMovementSpeed };
                     if (ImGui.sliderFloat("Cam Speed", inputValue, 0.0f, 2.0f, "%0.2f")) {
                         camMovementSpeed = inputValue[0];
                     }
                 }
 
                 {
-                    float[] inputValue = new float[]{(float) (1.0 - zoomSmoothness)};
+                    float[] inputValue = new float[] { (float) (1.0 - zoomSmoothness) };
                     if (ImGui.sliderFloat("Cam Smoothing", inputValue, 0.0f, 1.0f, "%0.2f")) {
                         zoomSmoothness = 1.0 - inputValue[0];
                         shiftSmoothness = 1.0 - inputValue[0];
@@ -739,8 +755,9 @@ public class Main extends App {
                 }
 
                 {
-                    float[] inputValue = new float[]{(float) (zoomStepFactor - 1) * 100};
-                    if (ImGui.sliderFloat("Zoom Step", inputValue, 0.0f, 100.0f, "%.1f%%", ImGuiSliderFlags.Logarithmic)) {
+                    float[] inputValue = new float[] { (float) (zoomStepFactor - 1) * 100 };
+                    if (ImGui.sliderFloat("Zoom Step", inputValue, 0.0f, 100.0f, "%.1f%%",
+                            ImGuiSliderFlags.Logarithmic)) {
                         zoomStepFactor = 1 + inputValue[0] * 0.01;
                     }
                 }
@@ -750,7 +767,7 @@ public class Main extends App {
                 }
 
                 {
-                    float[] inputValue = new float[]{guiBackgroundAlpha};
+                    float[] inputValue = new float[] { guiBackgroundAlpha };
                     if (ImGui.sliderFloat("GUI Opacity", inputValue, 0.0f, 1.0f)) {
                         guiBackgroundAlpha = inputValue[0];
                     }
@@ -813,25 +830,25 @@ public class Main extends App {
                         [l]/[L]: change palette
                         [s]/[S]: change shader
                         [v]/[V]: change accelerator
-                                                
+
                         [x]/[X]: change position setter
                         [r]/[R]: change matrix generator
-                                                
+
                         [p]: set positions
                         [t]: set types
                         [m]: set matrix
-                                                
+
                         [w]: toggle space wrapping
-                                                
+
                         [SPACE]: pause physics
-                                                
+
                         [F11]: toggle full screen
                         [ALT]+[F4]: quit
-                                                
+
                         [+]/[-]: zoom
                         [z]: reset zoom
                         [Z]: reset zoom (fit window)
-                                                
+
                         [a]: toggle advanced GUI
                         [c]: toggle traces (clear screen)
                         [h]: hide GUI / show GUI
@@ -864,14 +881,17 @@ public class Main extends App {
                 ImGui.textDisabled("// imports:");
                 ImGui.sameLine();
                 ImGuiUtils.helpMarker("Add imports here if you need them. Example: import java.util.List;");
-                if (ImGui.inputTextMultiline("##Imports", textInputAcceleratorCodeImports, -1, 50, ImGuiInputTextFlags.CallbackResize)) {
+                if (ImGui.inputTextMultiline("##Imports", textInputAcceleratorCodeImports, -1, 50,
+                        ImGuiInputTextFlags.CallbackResize)) {
                     editingAccelerator.object.importCode = textInputAcceleratorCodeImports.get();
                 }
 
                 ImGui.text("public class ");
                 ImGui.sameLine();
                 ImGui.pushItemWidth(200);
-                if (ImGui.inputText("##Class Name", textInputAcceleratorCodeClassName, ImGuiInputTextFlags.CallbackResize | ImGuiInputTextFlags.CharsNoBlank | ImGuiInputTextFlags.AutoSelectAll)) {
+                if (ImGui.inputText("##Class Name", textInputAcceleratorCodeClassName,
+                        ImGuiInputTextFlags.CallbackResize | ImGuiInputTextFlags.CharsNoBlank
+                                | ImGuiInputTextFlags.AutoSelectAll)) {
                     editingAccelerator.object.className = textInputAcceleratorCodeClassName.get();
                     editingAccelerator.name = textInputAcceleratorCodeClassName.get();
                 }
@@ -882,7 +902,8 @@ public class Main extends App {
 
                 ImGui.text("public Vector3d accelerate(double a, Vector3d x) {");
                 ImGui.indent();
-                if (ImGui.inputTextMultiline("##Code", textInputAcceleratorCodeMethodCode, -1, 100, ImGuiInputTextFlags.CallbackResize | ImGuiInputTextFlags.AllowTabInput)) {
+                if (ImGui.inputTextMultiline("##Code", textInputAcceleratorCodeMethodCode, -1, 100,
+                        ImGuiInputTextFlags.CallbackResize | ImGuiInputTextFlags.AllowTabInput)) {
                     editingAccelerator.object.methodCode = textInputAcceleratorCodeMethodCode.get();
                 }
                 ImGui.unindent();
@@ -898,7 +919,8 @@ public class Main extends App {
                         editingAccelerator.object.accelerator = compiledAccelerator;
 
                         if (accelerators.contains(editingAccelerator)) {
-                            // if this accelerator is currently active, also set the accelerator of physics to the new one.
+                            // if this accelerator is currently active, also set the accelerator of physics
+                            // to the new one.
                             if (accelerators.getActive() == editingAccelerator) {
                                 final Accelerator newAccelerator = editingAccelerator.object.accelerator;
                                 loop.enqueue(() -> physics.accelerator = newAccelerator);
@@ -927,7 +949,7 @@ public class Main extends App {
 
     private void exportData() {
 
-        //todo: this is just a demo
+        // todo: this is just a demo
 
         System.out.println("Now exporting...");
 
@@ -954,17 +976,17 @@ public class Main extends App {
 
     private void buildMainMenu() {
         if (ImGui.beginMenu("Main")) {
-            //todo: implement import/export
-//            if (ImGui.menuItem("Import..", "Str+O")) {
-//                //todo show file dialog
-//                //     importSettings.path = ...
-//                showImportWindow = true;
-//            }
-//
-//            if (ImGui.menuItem("Export..", "Str+S")) {
-//                showExportWindow = true;
-//                setInitialExportSettings();
-//            }
+            // todo: implement import/export
+            // if (ImGui.menuItem("Import..", "Str+O")) {
+            // //todo show file dialog
+            // // importSettings.path = ...
+            // showImportWindow = true;
+            // }
+            //
+            // if (ImGui.menuItem("Export..", "Str+S")) {
+            // showExportWindow = true;
+            // setInitialExportSettings();
+            // }
 
             if (ImGui.menuItem("Settings..")) {
                 showSettings.set(true);
@@ -1050,7 +1072,8 @@ public class Main extends App {
     private void resetCamera(boolean smooth) {
         shiftGoal.set(0);
         zoomGoal = 1;
-        if (!smooth) shift.set(0);
+        if (!smooth)
+            shift.set(0);
     }
 
     private void setShaderVariables() {
@@ -1059,7 +1082,7 @@ public class Main extends App {
         new Coordinates(width, height, shift, zoom).apply(transform);
 
         // calculate palette
-        int nTypes = settings.matrix.size();//todo: use value from buffer?
+        int nTypes = settings.matrix.size();// todo: use value from buffer?
         Color[] colors = new Color[nTypes];
         Palette palette = palettes.getActive().object;
         for (int i = 0; i < nTypes; i++) {
@@ -1072,8 +1095,10 @@ public class Main extends App {
         particleShader.setTime(System.nanoTime() / 1000_000_000.0f);
         particleShader.setPalette(colors);
         particleShader.setTransform(transform);
-        particleShader.setSize(particleSize / Math.min(width, height) / (keepParticleSizeIndependentOfZoom ? (float) zoom : 1));
-        particleShader.setDetail(MathUtils.constrain(getDetailFromZoom(), ParticleShader.MIN_DETAIL, ParticleShader.MAX_DETAIL));
+        particleShader.setSize(
+                particleSize / Math.min(width, height) / (keepParticleSizeIndependentOfZoom ? (float) zoom : 1));
+        particleShader.setDetail(
+                MathUtils.constrain(getDetailFromZoom(), ParticleShader.MIN_DETAIL, ParticleShader.MAX_DETAIL));
 
         renderer.guiOverlayShader.use();
         renderer.guiOverlayShader.setTransform(transform);
@@ -1083,8 +1108,9 @@ public class Main extends App {
 
         double particleSizeOnScreen = keepParticleSizeIndependentOfZoom ? particleSize : particleSize * zoom;
 
-        double minDetailSize = 4;  // at this size, the detail is 4
-        double detailPerSize = 0.4;// from then on, the detail increases with this rate (per size on screen in pixels)
+        double minDetailSize = 4; // at this size, the detail is 4
+        double detailPerSize = 0.4;// from then on, the detail increases with this rate (per size on screen in
+                                   // pixels)
 
         if (particleSizeOnScreen < minDetailSize) {
             return 4;
@@ -1094,7 +1120,7 @@ public class Main extends App {
     }
 
     private void textureTest() throws IOException {
-//        URL url = ClassLoader.getSystemClassLoader().getResourceAsStream();
+        // URL url = ClassLoader.getSystemClassLoader().getResourceAsStream();
         String filename = "textures/particle.png";
         URL url = ClassLoader.getSystemClassLoader().getResource(filename);
         System.out.println(url);
@@ -1103,9 +1129,10 @@ public class Main extends App {
         int imgHeight = img.getHeight();
         int[] pixels = ((DataBufferInt) img.getData().getDataBuffer()).getData();
         System.out.println(pixels.length);
-//        int texture = glGenTextures();
-//        glBindTexture(GL_TEXTURE_2D, texture);
-//        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGBA, GL_INT, pixels);
+        // int texture = glGenTextures();
+        // glBindTexture(GL_TEXTURE_2D, texture);
+        // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGBA,
+        // GL_INT, pixels);
     }
 
     @Override
@@ -1240,7 +1267,7 @@ public class Main extends App {
 
             double zoomIncrease = Math.pow(zoomStepFactor, y);
 
-            Coordinates c = new Coordinates(width, height, shiftGoal, zoomGoal);  // use "goal" shift and zoom
+            Coordinates c = new Coordinates(width, height, shiftGoal, zoomGoal); // use "goal" shift and zoom
             c.zoomInOnMouse(new Vector2d(mouseX, mouseY), zoomIncrease);
 
             zoomGoal = c.zoom;
