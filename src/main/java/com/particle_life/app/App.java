@@ -92,7 +92,7 @@ public abstract class App {
         imGuiLayer.destroyImGui();
     }
 
-    private final ImageClass icon_file = ImageClass.loadImage("favicon.png");
+    private final ImageClass icon_file = ImageClass.loadImage("original_icon.png");
 
     private void init(String title, boolean fullscreen) {
         // Setup an error callback. The default implementation
