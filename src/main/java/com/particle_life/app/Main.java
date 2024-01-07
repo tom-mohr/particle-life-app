@@ -98,12 +98,12 @@ public class Main extends App {
     // GUI: constants that control how the GUI behaves
     private long physicsNotReactingThreshold = 3000;  // time in milliseconds
     private double matrixGuiStepSize = 0.2;
-    private int typeCountDiagramStepSize = 500;
+    private int typeCountDiagramStepSize = 100;
     private boolean typeCountDisplayPercentage = false;
 
     // GUI: hide / show parts
     private final ImBoolean showGui = new ImBoolean(true);
-    private boolean advancedGui = false;
+    private boolean advancedGui = true;
     private final ImBoolean showStyleEditor = new ImBoolean(false);
     private final ImBoolean showSettings = new ImBoolean(false);
     private final ImBoolean showShortcutsWindow = new ImBoolean(false);
@@ -466,14 +466,24 @@ public class Main extends App {
                         loop.enqueue(() -> physics.settings.wrap = newWrap);
                     }
 
-                    {
-                        float displayValue = (float) settings.rmax;
-                        float[] rmaxSliderValue = new float[]{displayValue};
-                        if (ImGui.sliderFloat("rmax", rmaxSliderValue, 0.005f, 1.000f, String.format("%.3f", displayValue), ImGuiSliderFlags.Logarithmic)) {
-                            final float newRmax = rmaxSliderValue[0];
-                            loop.enqueue(() -> physics.settings.rmax = newRmax);
-                        }
-                    }
+                    // SliderFloat Block
+{
+    float displayValue = (float) settings.rmax;
+    float[] rmaxSliderValue = new float[]{displayValue};
+    if (ImGui.sliderFloat("rmax##Slider", rmaxSliderValue, 0.005f, 1.000f, String.format("%.3f", displayValue), ImGuiSliderFlags.Logarithmic)) {
+        final float newRmax = rmaxSliderValue[0];
+        loop.enqueue(() -> physics.settings.rmax = newRmax);
+    }
+}
+
+// InputFloat Block
+{
+    ImFloat rmaxInputValue = new ImFloat((float) settings.rmax);
+    if (ImGui.inputFloat("rmax##Input", rmaxInputValue, 0.005f, 1.000f, "%.3f", ImGuiInputTextFlags.EnterReturnsTrue)) {
+        final float newRmax = Math.max(0.005f, Math.min(rmaxInputValue.get(), 1.000f)); // Clamping the value within a range
+        loop.enqueue(() -> physics.settings.rmax = newRmax);
+    }
+}
 
                     {// FRICTION
                         float[] frictionSliderValue = new float[]{(float) settings.velocityHalfLife};
@@ -492,6 +502,16 @@ public class Main extends App {
                     if (ImGui.sliderFloat("force scaling", forceFactorSliderValue, 0.0f, 10.0f)) {
                         final float newForceFactor = forceFactorSliderValue[0];
                         loop.enqueue(() -> physics.settings.force = newForceFactor);
+                    }
+
+                    // InputFloat Block
+
+                    {
+                    ImFloat forcefactorInputValue = new ImFloat((float) settings.force);
+                    if (ImGui.inputFloat("force##Input", forcefactorInputValue, 0.005f, 1.000f, "%.3f", ImGuiInputTextFlags.EnterReturnsTrue)) {
+                        final float newForceFactor = Math.max(0.005f, Math.min(forcefactorInputValue.get(), 10.000f)); // Clamping the value within a range
+                        loop.enqueue(() -> physics.settings.force = newForceFactor);
+                        }
                     }
 
                     if (advancedGui) {
@@ -587,18 +607,25 @@ public class Main extends App {
             ImGui.text("Physics didn't react since %4.1f seconds.".formatted(physicsNotReactingSince / 1000.0));
 
             if (ImGui.button("Try Reset")) {
-
+  
+                        
                 try {
                     if (loop.stop(1000)) {
                         physics.shutdown(1000);
                         createPhysics();
                     } else {
                         ImGui.openPopup("Taking too long");
+
+                      
                     }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                     //todo: How should this be handled?
                 }
+            }
+
+            if (ImGui.button("particle count = 0?")) {
+                            loop.enqueue(() -> physics.setParticleCount(0));
             }
 
             if (ImGui.beginPopupModal("Taking too long")) {
@@ -612,6 +639,8 @@ public class Main extends App {
                 if (ImGui.button("close app")) {
                     close();// kill whole app
                 }
+
+                
 
                 ImGui.endPopup();
             }
