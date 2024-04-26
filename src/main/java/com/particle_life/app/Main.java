@@ -23,6 +23,9 @@ import org.joml.Vector2d;
 import org.joml.Vector3d;
 
 import java.util.Arrays;
+import java.util.Date;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.lwjgl.opengl.GL11.glEnable;
@@ -33,6 +36,8 @@ public class Main extends App {
     public static void main(String[] args) {
         new Main().launch("Particle Life Simulator", true);
     }
+
+    private final static double BPM = 146.0 / 2;
 
     // data
     private final Clock renderClock = new Clock(60);
@@ -53,8 +58,8 @@ public class Main extends App {
 
     private ExtendedPhysics physics;
     private Loop loop;
-    private boolean autoDt = true;
-    private double fallbackDt = 0.02;
+    private boolean autoDt = false;
+    private double fallbackDt = 0.05;
     private PhysicsSnapshot physicsSnapshot;
     private final LoadDistributor physicsSnapshotLoadDistributor = new LoadDistributor();  // speed up taking snapshots with parallelization
     public AtomicBoolean newSnapshotAvailable = new AtomicBoolean(false);
@@ -139,6 +144,19 @@ public class Main extends App {
         // cursor object must be created after renderer.init()
         cursor = new Cursor();
         cursor.shape = cursorShapes.getActive();  // set initial cursor shape (would be null otherwise)
+
+
+        // create periodic timer
+        Timer timer = new Timer();
+        timer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                loop.enqueue(physics::generateMatrix);
+                traces = Math.random() < 0.1;
+            }
+        }, new Date(), (int) Math.round(60 * 1000 / BPM));
+
+        showGui.set(false);
     }
 
     private void createPhysics() {
@@ -154,6 +172,8 @@ public class Main extends App {
         loop = new Loop();
         loop.start(dt -> {
             physics.settings.dt = autoDt ? dt : fallbackDt;
+            physics.settings.rmax = 0.13;
+            physics.setParticleCount(5000);
             physics.update();
         });
     }
