@@ -72,7 +72,7 @@ public class Main extends App {
 
     // particle rendering: constants
     private double zoomStepFactor = 1.2;
-    private float particleSize = 4.0f;   // particle size on screen (in pixels)
+    private float particleSize = 10.0f;   // particle size on screen (in pixels)
     private boolean keepParticleSizeIndependentOfZoom = false;
     private double shiftSmoothness = 0.3;
     private double zoomSmoothness = 0.3;
