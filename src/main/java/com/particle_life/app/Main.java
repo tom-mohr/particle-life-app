@@ -1,3 +1,6 @@
+
+
+
 package com.particle_life.app;
 
 import com.particle_life.*;
@@ -35,6 +38,9 @@ public class Main extends App {
     }
 
     // data
+    private final ImFloat speedThreshold = new ImFloat(10.0f);
+    private final ImFloat colorMultiplier = new ImFloat(1.0f); // Adjust brightness or other effect
+
     private final Clock renderClock = new Clock(60);
     private SelectionManager<ParticleShader> shaders;
     private SelectionManager<Palette> palettes;
@@ -66,7 +72,7 @@ public class Main extends App {
     private int cursorParticleCount = 0;
 
     // particle rendering: constants
-    private double zoomStepFactor = 1.2;
+    private static double zoomStepFactor = 1.2;
     private float particleSize = 4.0f;   // particle size on screen (in pixels)
     private boolean keepParticleSizeIndependentOfZoom = false;
     private double shiftSmoothness = 0.3;
@@ -140,6 +146,12 @@ public class Main extends App {
         cursor = new Cursor();
         cursor.shape = cursorShapes.getActive();  // set initial cursor shape (would be null otherwise)
     }
+
+
+
+
+
+
 
     private void createPhysics() {
         physics = new ExtendedPhysics(
@@ -298,6 +310,8 @@ public class Main extends App {
         renderer.run(transform, cursor, ImGui.getDrawData(), width, height);  // draw particles and GUI
     }
 
+
+    
     private void buildGui() {
 
         ImGui.setNextWindowBgAlpha(guiBackgroundAlpha);
@@ -497,9 +511,15 @@ public class Main extends App {
                         ImGui.sameLine();
                         ImGuiUtils.helpMarker("The time after which half the velocity of a particle should be lost due to friction.");
                     }
-
+                    {
+                        ImFloat frictionfactorInputValue = new ImFloat((float) settings.velocityHalfLife);
+                        if (ImGui.inputFloat("friction##Input", frictionfactorInputValue, 0.005f, 1.000f, "%.3f", ImGuiInputTextFlags.EnterReturnsTrue)) {
+                            final float newFrictionFactor = Math.max(0.005f, Math.min(frictionfactorInputValue.get(), 1.000f)); // Clamping the value within a range
+                            loop.enqueue(() -> physics.settings.velocityHalfLife = newFrictionFactor);
+                            }
+                        }
                     float[] forceFactorSliderValue = new float[]{(float) settings.force};
-                    if (ImGui.sliderFloat("force scaling", forceFactorSliderValue, 0.0f, 10.0f)) {
+                    if (ImGui.sliderFloat("force scaling", forceFactorSliderValue, 0.0f, 100.0f)) {
                         final float newForceFactor = forceFactorSliderValue[0];
                         loop.enqueue(() -> physics.settings.force = newForceFactor);
                     }
@@ -509,7 +529,7 @@ public class Main extends App {
                     {
                     ImFloat forcefactorInputValue = new ImFloat((float) settings.force);
                     if (ImGui.inputFloat("force##Input", forcefactorInputValue, 0.005f, 1.000f, "%.3f", ImGuiInputTextFlags.EnterReturnsTrue)) {
-                        final float newForceFactor = Math.max(0.005f, Math.min(forcefactorInputValue.get(), 10.000f)); // Clamping the value within a range
+                        final float newForceFactor = Math.max(0.005f, Math.min(forcefactorInputValue.get(), 1000.000f)); // Clamping the value within a range
                         loop.enqueue(() -> physics.settings.force = newForceFactor);
                         }
                     }
