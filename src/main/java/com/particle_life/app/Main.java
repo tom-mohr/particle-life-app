@@ -474,11 +474,15 @@ public class Main extends App {
                             ImGuiUtils.helpMarker(acceleratorDescription);
                         }
                     }
+                    ImGui.sameLine();
+                    ImGuiUtils.helpMarker("Use this to set how the particles interact with one another");
 
                     if (ImGui.checkbox("wrap [w]", settings.wrap)) {
                         final boolean newWrap = !settings.wrap;
                         loop.enqueue(() -> physics.settings.wrap = newWrap);
                     }
+                    ImGui.sameLine();
+                    ImGuiUtils.helpMarker("determines if the boardering space wraps around or not");
 
                     // SliderFloat Block
 {
@@ -489,7 +493,8 @@ public class Main extends App {
         loop.enqueue(() -> physics.settings.rmax = newRmax);
     }
 }
-
+ImGui.sameLine();
+ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
 // InputFloat Block
 {
     ImFloat rmaxInputValue = new ImFloat((float) settings.rmax);
@@ -524,7 +529,8 @@ public class Main extends App {
                         loop.enqueue(() -> physics.settings.force = newForceFactor);
                     }
 
-                    // InputFloat Block
+                    ImGui.sameLine();
+                    ImGuiUtils.helpMarker("The value of force between particles");
 
                     {
                     ImFloat forcefactorInputValue = new ImFloat((float) settings.force);
@@ -543,6 +549,8 @@ public class Main extends App {
                             final int newThreadNumber = Math.max(1, threadNumberInput.get());
                             loop.enqueue(() -> physics.preferredNumberOfThreads = newThreadNumber);
                         }
+                        ImGui.sameLine();
+                        ImGuiUtils.helpMarker("controls the number of threads used by your processor (if you don't know what this means leave it alone)");
 
                         if (ImGui.checkbox("auto time", autoDt)) autoDt ^= true;
                         ImGui.sameLine();
@@ -566,9 +574,13 @@ public class Main extends App {
                         ImGui.sameLine();
                         ImGuiUtils.helpMarker("(i)", shaderDescription);
                     }
+                    ImGui.sameLine();
+                    ImGuiUtils.helpMarker("types of particles");
 
                     // PALETTES
                     renderCombo("palette [l]", palettes);
+                    ImGui.sameLine();
+                    ImGuiUtils.helpMarker("color of particles");
 
                     float[] particleSizeSliderValue = new float[]{particleSize};
                     if (ImGui.sliderFloat("particle size [ctrl+scroll]", particleSizeSliderValue, 0.1f, 10f)) {
