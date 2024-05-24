@@ -518,7 +518,7 @@ ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
                     }
                     {
                         ImFloat frictionfactorInputValue = new ImFloat((float) settings.velocityHalfLife);
-                        if (ImGui.inputFloat("friction##Input", frictionfactorInputValue, 0.005f, 1.000f, "%.3f", ImGuiInputTextFlags.EnterReturnsTrue)) {
+                        if (ImGui.inputFloat("friction##Input", frictionfactorInputValue, 0.005f, 1.000f, "%.04f", ImGuiInputTextFlags.EnterReturnsTrue)) {
                             final float newFrictionFactor = Math.max(0.005f, Math.min(frictionfactorInputValue.get(), 1.000f)); // Clamping the value within a range
                             loop.enqueue(() -> physics.settings.velocityHalfLife = newFrictionFactor);
                             }
@@ -534,7 +534,7 @@ ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
 
                     {
                     ImFloat forcefactorInputValue = new ImFloat((float) settings.force);
-                    if (ImGui.inputFloat("force##Input", forcefactorInputValue, 0.005f, 1.000f, "%.3f", ImGuiInputTextFlags.EnterReturnsTrue)) {
+                    if (ImGui.inputFloat("force##Input", forcefactorInputValue, 0.005f, 1.000f, "%.04f", ImGuiInputTextFlags.EnterReturnsTrue)) {
                         final float newForceFactor = Math.max(0.005f, Math.min(forcefactorInputValue.get(), 1000.000f)); // Clamping the value within a range
                         loop.enqueue(() -> physics.settings.force = newForceFactor);
                         }
@@ -557,9 +557,18 @@ ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
                         ImGuiUtils.helpMarker("If ticked, the time step of the physics computation will be chosen automatically based on the real passed time.");
                         if (autoDt) ImGui.beginDisabled();
                         float[] dtSliderValue = new float[]{(float) fallbackDt};
-                        if (ImGui.sliderFloat("##dt", dtSliderValue, 0.0f, 0.1f, String.format("%4.1f ms", fallbackDt * 1000.0), ImGuiSliderFlags.Logarithmic)) {
+                        if (ImGui.sliderFloat("##dt", dtSliderValue, 0.0f, 0.1f, String.format("%4.1f ms", fallbackDt * 1000.0))) {
                             fallbackDt = dtSliderValue[0];
                         }
+
+                        {
+                            ImFloat inputValue = new ImFloat((float) fallbackDt);
+                            if (ImGui.inputFloat("Step##Time", inputValue, 0.0005f, 0.005f, "%.04f")) {
+                                fallbackDt = MathUtils.constrain(inputValue.get(), 0.00f, 0.1f);
+                            }
+                        }
+
+
                         if (autoDt) ImGui.endDisabled();
                     }
                 }
