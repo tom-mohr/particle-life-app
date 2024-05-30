@@ -488,7 +488,7 @@ public class Main extends App {
 {
     float displayValue = (float) settings.rmax;
     float[] rmaxSliderValue = new float[]{displayValue};
-    if (ImGui.sliderFloat("Rmax##Slider", rmaxSliderValue, 0.005f, 1.000f, String.format("%.3f", displayValue), ImGuiSliderFlags.Logarithmic)) {
+    if (ImGui.sliderFloat("rmax##Slider", rmaxSliderValue, 0.005f, 1.000f, String.format("%.3f", displayValue), ImGuiSliderFlags.Logarithmic)) {
         final float newRmax = rmaxSliderValue[0];
         loop.enqueue(() -> physics.settings.rmax = newRmax);
     }
@@ -498,7 +498,7 @@ ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
 // InputFloat Block
 {
     ImFloat rmaxInputValue = new ImFloat((float) settings.rmax);
-    if (ImGui.inputFloat("Rmax##Input", rmaxInputValue, 0.005f, 1.000f, "%.3f", ImGuiInputTextFlags.EnterReturnsTrue)) {
+    if (ImGui.inputFloat("rmax##Input", rmaxInputValue, 0.005f, 1.000f, "%.3f", ImGuiInputTextFlags.EnterReturnsTrue)) {
         final float newRmax = Math.max(0.005f, Math.min(rmaxInputValue.get(), 1.000f)); // Clamping the value within a range
         loop.enqueue(() -> physics.settings.rmax = newRmax);
     }
@@ -506,7 +506,7 @@ ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
 
                     {// FRICTION
                         float[] frictionSliderValue = new float[]{(float) settings.velocityHalfLife};
-                        if (ImGui.sliderFloat("Friction Slider",
+                        if (ImGui.sliderFloat("velocity half life",
                                 frictionSliderValue, 0.0f, 1.0f,
                                 String.format("%4.0f ms", settings.velocityHalfLife * 1000),
                                 ImGuiSliderFlags.Logarithmic)) {
@@ -516,15 +516,6 @@ ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
                         ImGui.sameLine();
                         ImGuiUtils.helpMarker("The time after which half the velocity of a particle should be lost due to friction.");
                     }
-<<<<<<< HEAD
-                    {
-                        ImFloat frictionfactorInputValue = new ImFloat((float) settings.velocityHalfLife);
-                        if (ImGui.inputFloat("Friction##Input", frictionfactorInputValue, 0.005f, 1.000f, "%.04f", ImGuiInputTextFlags.EnterReturnsTrue)) {
-                            final float newFrictionFactor = Math.max(0.005f, Math.min(frictionfactorInputValue.get(), 1.000f)); // Clamping the value within a range
-                            loop.enqueue(() -> physics.settings.velocityHalfLife = newFrictionFactor);
-                            }
-                        }
-=======
                     {
                         ImFloat frictionfactorInputValue = new ImFloat((float) settings.velocityHalfLife);
                         if (ImGui.inputFloat("friction##Input", frictionfactorInputValue, 0.005f, 1.000f, "%.04f", ImGuiInputTextFlags.EnterReturnsTrue)) {
@@ -532,7 +523,6 @@ ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
                             loop.enqueue(() -> physics.settings.velocityHalfLife = newFrictionFactor);
                             }
                         }
->>>>>>> 242988a0df2559d1c9018252ed053a7dcc917c64
                     float[] forceFactorSliderValue = new float[]{(float) settings.force};
                     if (ImGui.sliderFloat("force scaling", forceFactorSliderValue, 0.0f, 100.0f)) {
                         final float newForceFactor = forceFactorSliderValue[0];
