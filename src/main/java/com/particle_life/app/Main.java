@@ -1,3 +1,4 @@
+
 package com.particle_life.app;
 
 import com.particle_life.*;
@@ -35,6 +36,9 @@ public class Main extends App {
     }
 
     // data
+    private final ImFloat speedThreshold = new ImFloat(10.0f);
+    private final ImFloat colorMultiplier = new ImFloat(1.0f); // Adjust brightness or other effect
+
     private final Clock renderClock = new Clock(60);
     private SelectionManager<ParticleShader> shaders;
     private SelectionManager<Palette> palettes;
@@ -98,12 +102,12 @@ public class Main extends App {
     // GUI: constants that control how the GUI behaves
     private long physicsNotReactingThreshold = 3000;  // time in milliseconds
     private double matrixGuiStepSize = 0.2;
-    private int typeCountDiagramStepSize = 500;
+    private int typeCountDiagramStepSize = 100;
     private boolean typeCountDisplayPercentage = false;
 
     // GUI: hide / show parts
     private final ImBoolean showGui = new ImBoolean(true);
-    private boolean advancedGui = false;
+    private boolean advancedGui = true;
     private final ImBoolean showStyleEditor = new ImBoolean(false);
     private final ImBoolean showSettings = new ImBoolean(false);
     private final ImBoolean showShortcutsWindow = new ImBoolean(false);
@@ -140,6 +144,12 @@ public class Main extends App {
         cursor = new Cursor();
         cursor.shape = cursorShapes.getActive();  // set initial cursor shape (would be null otherwise)
     }
+
+
+
+
+
+
 
     private void createPhysics() {
         physics = new ExtendedPhysics(
@@ -298,6 +308,8 @@ public class Main extends App {
         renderer.run(transform, cursor, ImGui.getDrawData(), width, height);  // draw particles and GUI
     }
 
+
+    
     private void buildGui() {
 
         ImGui.setNextWindowBgAlpha(guiBackgroundAlpha);
@@ -460,20 +472,35 @@ public class Main extends App {
                             ImGuiUtils.helpMarker(acceleratorDescription);
                         }
                     }
+                    ImGui.sameLine();
+                    ImGuiUtils.helpMarker("Use this to set how the particles interact with one another");
 
                     if (ImGui.checkbox("wrap [w]", settings.wrap)) {
                         final boolean newWrap = !settings.wrap;
                         loop.enqueue(() -> physics.settings.wrap = newWrap);
                     }
+                    ImGui.sameLine();
+                    ImGuiUtils.helpMarker("determines if the boardering space wraps around or not");
 
-                    {
-                        float displayValue = (float) settings.rmax;
-                        float[] rmaxSliderValue = new float[]{displayValue};
-                        if (ImGui.sliderFloat("rmax", rmaxSliderValue, 0.005f, 1.000f, String.format("%.3f", displayValue), ImGuiSliderFlags.Logarithmic)) {
-                            final float newRmax = rmaxSliderValue[0];
-                            loop.enqueue(() -> physics.settings.rmax = newRmax);
-                        }
-                    }
+                    // SliderFloat Block
+{
+    float displayValue = (float) settings.rmax;
+    float[] rmaxSliderValue = new float[]{displayValue};
+    if (ImGui.sliderFloat("rmax##Slider", rmaxSliderValue, 0.005f, 1.000f, String.format("%.3f", displayValue), ImGuiSliderFlags.Logarithmic)) {
+        final float newRmax = rmaxSliderValue[0];
+        loop.enqueue(() -> physics.settings.rmax = newRmax);
+    }
+}
+ImGui.sameLine();
+ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
+// InputFloat Block
+{
+    ImFloat rmaxInputValue = new ImFloat((float) settings.rmax);
+    if (ImGui.inputFloat("rmax##Input", rmaxInputValue, 0.005f, 1.000f, "%.3f", ImGuiInputTextFlags.EnterReturnsTrue)) {
+        final float newRmax = Math.max(0.005f, Math.min(rmaxInputValue.get(), 1.000f)); // Clamping the value within a range
+        loop.enqueue(() -> physics.settings.rmax = newRmax);
+    }
+}
 
                     {// FRICTION
                         float[] frictionSliderValue = new float[]{(float) settings.velocityHalfLife};
@@ -487,11 +514,28 @@ public class Main extends App {
                         ImGui.sameLine();
                         ImGuiUtils.helpMarker("The time after which half the velocity of a particle should be lost due to friction.");
                     }
-
+                    {
+                        ImFloat frictionfactorInputValue = new ImFloat((float) settings.velocityHalfLife);
+                        if (ImGui.inputFloat("friction##Input", frictionfactorInputValue, 0.005f, 1.000f, "%.04f", ImGuiInputTextFlags.EnterReturnsTrue)) {
+                            final float newFrictionFactor = Math.max(0.005f, Math.min(frictionfactorInputValue.get(), 1.000f)); // Clamping the value within a range
+                            loop.enqueue(() -> physics.settings.velocityHalfLife = newFrictionFactor);
+                            }
+                        }
                     float[] forceFactorSliderValue = new float[]{(float) settings.force};
-                    if (ImGui.sliderFloat("force scaling", forceFactorSliderValue, 0.0f, 10.0f)) {
+                    if (ImGui.sliderFloat("force scaling", forceFactorSliderValue, 0.0f, 100.0f)) {
                         final float newForceFactor = forceFactorSliderValue[0];
                         loop.enqueue(() -> physics.settings.force = newForceFactor);
+                    }
+
+                    ImGui.sameLine();
+                    ImGuiUtils.helpMarker("The value of force between particles");
+
+                    {
+                    ImFloat forcefactorInputValue = new ImFloat((float) settings.force);
+                    if (ImGui.inputFloat("force##Input", forcefactorInputValue, 0.005f, 1.000f, "%.04f", ImGuiInputTextFlags.EnterReturnsTrue)) {
+                        final float newForceFactor = Math.max(0.005f, Math.min(forcefactorInputValue.get(), 1000.000f)); // Clamping the value within a range
+                        loop.enqueue(() -> physics.settings.force = newForceFactor);
+                        }
                     }
 
                     if (advancedGui) {
@@ -503,15 +547,26 @@ public class Main extends App {
                             final int newThreadNumber = Math.max(1, threadNumberInput.get());
                             loop.enqueue(() -> physics.preferredNumberOfThreads = newThreadNumber);
                         }
+                        ImGui.sameLine();
+                        ImGuiUtils.helpMarker("controls the number of threads used by your processor (if you don't know what this means leave it alone)");
 
                         if (ImGui.checkbox("auto time", autoDt)) autoDt ^= true;
                         ImGui.sameLine();
                         ImGuiUtils.helpMarker("If ticked, the time step of the physics computation will be chosen automatically based on the real passed time.");
                         if (autoDt) ImGui.beginDisabled();
                         float[] dtSliderValue = new float[]{(float) fallbackDt};
-                        if (ImGui.sliderFloat("##dt", dtSliderValue, 0.0f, 0.1f, String.format("%4.1f ms", fallbackDt * 1000.0), ImGuiSliderFlags.Logarithmic)) {
+                        if (ImGui.sliderFloat("##dt", dtSliderValue, 0.0f, 0.1f, String.format("%.04f ms", fallbackDt * 1000.0))) {
                             fallbackDt = dtSliderValue[0];
                         }
+
+                        {
+                            ImFloat inputValue = new ImFloat((float) fallbackDt);
+                            if (ImGui.inputFloat("Step##Time", inputValue, 0.0005f, 0.005f, "%.04f")) {
+                                fallbackDt = MathUtils.constrain(inputValue.get(), 0.00f, 0.1f);
+                            }
+                        }
+
+
                         if (autoDt) ImGui.endDisabled();
                     }
                 }
@@ -526,9 +581,13 @@ public class Main extends App {
                         ImGui.sameLine();
                         ImGuiUtils.helpMarker("(i)", shaderDescription);
                     }
+                    ImGui.sameLine();
+                    ImGuiUtils.helpMarker("types of particles");
 
                     // PALETTES
                     renderCombo("palette [l]", palettes);
+                    ImGui.sameLine();
+                    ImGuiUtils.helpMarker("color of particles");
 
                     float[] particleSizeSliderValue = new float[]{particleSize};
                     if (ImGui.sliderFloat("particle size [ctrl+scroll]", particleSizeSliderValue, 0.1f, 10f)) {
@@ -587,18 +646,25 @@ public class Main extends App {
             ImGui.text("Physics didn't react since %4.1f seconds.".formatted(physicsNotReactingSince / 1000.0));
 
             if (ImGui.button("Try Reset")) {
-
+  
+                        
                 try {
                     if (loop.stop(1000)) {
                         physics.shutdown(1000);
                         createPhysics();
                     } else {
                         ImGui.openPopup("Taking too long");
+
+                      
                     }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                     //todo: How should this be handled?
                 }
+            }
+
+            if (ImGui.button("particle count = 0?")) {
+                            loop.enqueue(() -> physics.setParticleCount(0));
             }
 
             if (ImGui.beginPopupModal("Taking too long")) {
@@ -612,6 +678,8 @@ public class Main extends App {
                 if (ImGui.button("close app")) {
                     close();// kill whole app
                 }
+
+                
 
                 ImGui.endPopup();
             }

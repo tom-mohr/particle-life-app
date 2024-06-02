@@ -1,12 +1,12 @@
+name: "default"
+vertex: "default.vert"
+geometry: "default.geom"
+fragment: "default.frag"
+---
 name: "repeat"
 description: "Draws copies of particles (without colors) beyond the borders. This is helpful if \"wrap\" is enabled."
 vertex: "default.vert"
 geometry: "repeat.geom"
-fragment: "default.frag"
----
-name: "default"
-vertex: "default.vert"
-geometry: "default.geom"
 fragment: "default.frag"
 ---
 name: "white"
