@@ -5,7 +5,7 @@ plugins {
     id "application"                                     // for "run" task
     id 'edu.sc.seis.launch4j' version '2.5.1'            // for generating .exe
     id 'org.beryx.runtime' version '1.12.7'              // for generating JRE
-    id 'com.github.johnrengelman.shadow' version '7.1.2' // only needed to make linux build
+    id "io.github.goooler.shadow" version "8.1.8"        // only needed to make linux build
 }
 
 application {
