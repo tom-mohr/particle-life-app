@@ -3,8 +3,8 @@ import org.gradle.internal.os.OperatingSystem
 plugins {
     id "java"
     id "application"                                     // for "run" task
-    id 'edu.sc.seis.launch4j' version '2.5.1'            // for generating .exe
-    id 'org.beryx.runtime' version '1.12.7'              // for generating JRE
+    id 'edu.sc.seis.launch4j' version '3.0.6'            // for generating .exe
+    id 'org.beryx.runtime' version '1.13.1'              // for generating JRE
     id "io.github.goooler.shadow" version "8.1.8"        // only needed to make linux build
 }
 
@@ -34,7 +34,7 @@ launch4j {
     icon = "${projectDir}/favicon.ico"
     mainClassName = 'com.particle_life.app.Main'
     dontWrapJar = true
-    bundledJre64Bit = true
+    requires64Bit = true
     bundledJrePath = "jre"
     classpath = [
             // We need to include the "lib/*" folder here,
