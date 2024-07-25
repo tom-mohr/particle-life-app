@@ -681,7 +681,7 @@ public class Main extends App {
                     ImGuiUtils.helpMarker("color of particles");
 
                     float[] particleSizeSliderValue = new float[]{appSettings.particleSize};
-                    if (ImGui.sliderFloat("particle size [ctrl+scroll]", particleSizeSliderValue, 0.1f, 10f)) {
+                    if (ImGui.sliderFloat("particle size [shift+scroll]", particleSizeSliderValue, 0.1f, 10f)) {
                         appSettings.particleSize = particleSizeSliderValue[0];
                     }
                     ImGui.sameLine();
@@ -703,7 +703,7 @@ public class Main extends App {
                         }
                         // cursor size slider
                         float[] cursorSizeSliderValue = new float[]{(float) cursor.size};
-                        if (ImGui.sliderFloat("cursor size [shift+scroll]", cursorSizeSliderValue,
+                        if (ImGui.sliderFloat("cursor size [ctrl+scroll]", cursorSizeSliderValue,
                                 0.001f, 1.000f,
                                 String.format("%.3f", cursor.size),
                                 ImGuiSliderFlags.Logarithmic)) {
@@ -1145,11 +1145,11 @@ public class Main extends App {
         boolean bothPressed = controlPressed && shiftPressed;
 
         if (bothPressed) {
-            // nothing
-        } else if (controlPressed) {
+            // nothing -- maybe add something here later
+        } else if (shiftPressed) {
             // change particle size
             appSettings.particleSize *= Math.pow(1.2, -y);
-        } else if (shiftPressed) {
+        } else if (controlPressed) {
             // change cursor size
             cursor.size *= Math.pow(1.2, -y);
         } else {
