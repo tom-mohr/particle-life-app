@@ -8,6 +8,9 @@ plugins {
     id "io.github.goooler.shadow" version "8.1.8"        // only needed to make linux build
 }
 
+def buildDir = layout.buildDirectory.get().asFile
+def workingDir = "$buildDir/app"
+
 application {
     mainClass = "com.particle_life.app.Main"  // required for "run" task
 
@@ -16,18 +19,15 @@ application {
     }
 }
 
+// copy resources to build directory
+tasks.register("copyResources", Copy) {
+    from "$projectDir/src/main/resources"
+    into workingDir
+}
+
 run {
-    classpath = layout.files(
-
-            // We need to include the "runtimeClasspath" here,
-            // because we are explicitly setting the "classpath" property.
-            // Otherwise, this would be included automatically.
-            sourceSets.main.runtimeClasspath,
-
-            // We need to explicitly include "resources" here,
-            // because we are excluding "resources" in the "jar" task.
-            "src/main/resources"
-    )
+    dependsOn(tasks.copyResources)
+    delegate.workingDir = workingDir
 }
 
 launch4j {
@@ -36,16 +36,6 @@ launch4j {
     dontWrapJar = true
     requires64Bit = true
     bundledJrePath = "jre"
-    classpath = [
-            // We need to include the "lib/*" folder here,
-            // because we are explicitly setting the "classpath" property.
-            // Otherwise, this would be included automatically.
-            "lib/*",
-
-            // We need to explicitly include "resources" here,
-            // because we are excluding "resources" in the "jar" task.
-            "resources/*"
-    ]
 }
 
 // creates folder "jre"
@@ -60,21 +50,15 @@ runtime {
 tasks.register('copyJre', Copy) {
     dependsOn tasks.runtime
 
-    from layout.buildDirectory.dir("jre")
-    into layout.buildDirectory.dir("app/jre")
-}
-
-// copy resources to
-tasks.register("copyResources", Copy) {
-    from layout.projectDirectory.dir("src/main/resources")
-    into layout.buildDirectory.dir("app/resources")
+    from "$buildDir/jre"
+    into "$workingDir/jre"
 }
 
 tasks.register('copyLaunch4j', Copy) {
     dependsOn tasks.createExe
 
-    from layout.buildDirectory.dir("launch4j")
-    into layout.buildDirectory.dir("app")
+    from "$buildDir/launch4j"
+    into workingDir
 }
 
 tasks.register('assembleApp') {
@@ -83,7 +67,7 @@ tasks.register('assembleApp') {
 
 tasks.register('zipApp', Zip) {
     dependsOn tasks.assembleApp
-    from layout.buildDirectory.dir("app")
+    from workingDir
     destinationDirectory = layout.buildDirectory.dir("zipApp")
     archiveFileName = "particle-life-app.zip"
 }
@@ -97,9 +81,8 @@ ext {
 
 jar {
     // This ignores all resource files when bundling the JAR.
-    // Reason: ToWe don't want our "resources" files to be included
-    // in the JAR, but instead in a separate directory (which we
-    // place next to the executable in the "assembleApp" task).
+    // Reason: We don't want our "resources" files to be included
+    // in the JAR, but instead outside, next to the executable.
     processResources.exclude('*')
 }
 
@@ -134,19 +117,26 @@ repositories {
 
 dependencies {
 
+    // Particle Life Backend
     implementation "com.github.tom-mohr:particle-life:v0.2.0"
 
-    // YamlBeans for parsing YAML files conveniently
-    implementation 'com.esotericsoftware.yamlbeans:yamlbeans:1.15'
+    // YAML Parser "YamlBeans"
+    implementation 'com.esotericsoftware.yamlbeans:yamlbeans:1.17'
 
-    // JOML
+    // TOML Parser
+    implementation 'com.moandjiezana.toml:toml4j:0.7.2'
+
+    // Apache Commons Text (for Levenshtein distance)
+    implementation 'org.apache.commons:commons-text:1.12.0'
+
+    // Linear Algebra Library "JOML"
     implementation 'org.joml:joml:1.10.1'
 
-    // imGui
+    // GUI Library "Dear ImGui"
     implementation "io.github.spair:imgui-java-binding:$imguiVersion"
     implementation "io.github.spair:imgui-java-natives-$natives:$imguiVersion"
 
-    // LWJGL
+    // LWJGL (Lightweight Java Game Library)
     // see https://www.lwjgl.org/customize for a list of all available contents
     [".lwjgl", ".glfw", ".opengl"].each {
         implementation "org.lwjgl.osgi:org.lwjgl$it:$lwjglVersion"

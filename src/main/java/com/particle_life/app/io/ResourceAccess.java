@@ -1,16 +1,11 @@
 package com.particle_life.app.io;
 
-import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -23,32 +18,40 @@ public class ResourceAccess {
         return ClassLoader.getSystemClassLoader().getResourceAsStream(path);
     }
 
-    public static String readTextFile(String path) {
-        InputStream inputStream = getInputStream(path);
-        String text = new BufferedReader(new InputStreamReader(inputStream))
-                .lines()
-                .collect(Collectors.joining("\n"));
-        try {
-            inputStream.close();
-        } catch (IOException e) {
-            e.printStackTrace();
+    public static boolean fileExists(String path) {
+        return new File(path).exists();
+    }
+
+    public static void createFile(String path) throws IOException {
+        File file = new File(path);
+
+        // ensure containing directories exist
+        File dir = file.getParentFile();
+        if (dir != null && !dir.exists()) {
+            if (!dir.mkdirs()) {
+                throw new IOException("Failed to create directories: " + dir.getAbsolutePath());
+            }
         }
-        return text;
+
+        // create file
+        if (!file.createNewFile()) {
+            throw new IOException("File already exists: " + file.getAbsolutePath());
+        }
+    }
+
+    public static String readTextFile(String path) throws IOException {
+        return new String(Files.readAllBytes(Paths.get(path)));
     }
 
     /**
-     * @param directory must not start with "/" or "./", e.g. "textures", "assets/music", ...
+     * Lists all files in the given directory.
+     *
+     * @param directory Path relative to the app's working directory.
+     *                  Must not start with "/" or "./".
+     *                  Examples for allowed paths: "textures", "assets/music", ...
      */
-    public static List<Path> listFiles(String directory) throws IOException, URISyntaxException {
-        URI uri = ClassLoader.getSystemClassLoader().getResource(directory).toURI();
-
-        Path path;
-        if (uri.getScheme().equals("jar")) {
-            path = FileSystems.newFileSystem(uri, Collections.emptyMap()).getPath(directory);
-        } else {
-            path = Paths.get(uri);
-        }
-
+    public static List<Path> listFiles(String directory) throws IOException {
+        Path path = new File(directory).toPath();
         return Files.walk(path, 1)
                 .skip(1)  // first entry is just the directory
                 .collect(Collectors.toList());

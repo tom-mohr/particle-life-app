@@ -8,7 +8,7 @@ import java.util.List;
 
 public class CursorActionProvider implements InfoWrapperProvider<CursorAction> {
     @Override
-    public List<InfoWrapper<CursorAction>> create() {
+    public List<InfoWrapper<CursorAction>> create() throws Exception {
         List<InfoWrapper<CursorAction>> list = new ArrayList<>();
 
         list.add(new InfoWrapper<>("Move", "Drag particles inside the cursor.", CursorAction.MOVE));

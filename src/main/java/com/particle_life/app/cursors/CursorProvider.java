@@ -8,7 +8,7 @@ import java.util.List;
 
 public class CursorProvider implements InfoWrapperProvider<CursorShape> {
     @Override
-    public List<InfoWrapper<CursorShape>> create() {
+    public List<InfoWrapper<CursorShape>> create() throws Exception {
         List<InfoWrapper<CursorShape>> list = new ArrayList<>();
 
         list.add(new InfoWrapper<>("Circle", "Cursor with round shape.", new CircleCursorShape()));

@@ -13,7 +13,7 @@ class PositionSetterProvider implements InfoWrapperProvider<PositionSetter> {
     private static final Random random = new Random();
 
     @Override
-    public List<InfoWrapper<PositionSetter>> create() {
+    public List<InfoWrapper<PositionSetter>> create() throws Exception {
         return List.of(
                 new InfoWrapper<>("uniform", new DefaultPositionSetter()),
                 new InfoWrapper<>("uniform circle", (position, type, nTypes) -> {

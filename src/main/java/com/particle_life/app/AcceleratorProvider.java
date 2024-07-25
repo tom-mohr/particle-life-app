@@ -10,7 +10,7 @@ import java.util.List;
 class AcceleratorProvider implements InfoWrapperProvider<Accelerator> {
 
     @Override
-    public List<InfoWrapper<Accelerator>> create() {
+    public List<InfoWrapper<Accelerator>> create() throws Exception {
         return List.of(
                 new InfoWrapper<Accelerator>("particle life", (a, pos) -> {
                     double rmin = 0.3;

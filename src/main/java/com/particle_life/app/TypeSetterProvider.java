@@ -9,7 +9,7 @@ import java.util.List;
 
 public class TypeSetterProvider implements InfoWrapperProvider<TypeSetter> {
     @Override
-    public List<InfoWrapper<TypeSetter>> create() {
+    public List<InfoWrapper<TypeSetter>> create() throws Exception {
         return List.of(
                 new InfoWrapper<>("fully random", new DefaultTypeSetter()),
                 new InfoWrapper<>("randomize 10%",

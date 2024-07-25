@@ -7,10 +7,9 @@ import com.particle_life.app.selection.InfoWrapper;
 import com.particle_life.app.selection.InfoWrapperProvider;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class ShaderProvider implements InfoWrapperProvider<ParticleShader> {
@@ -27,7 +26,7 @@ public class ShaderProvider implements InfoWrapperProvider<ParticleShader> {
     }
 
     @Override
-    public List<InfoWrapper<ParticleShader>> create() {
+    public List<InfoWrapper<ParticleShader>> create() throws Exception {
 
         List<String> files = listFilesInShadersDirectory();
         boolean containsConfigFile = files.remove(SHADERS_CONFIG_FILE);
@@ -70,15 +69,23 @@ public class ShaderProvider implements InfoWrapperProvider<ParticleShader> {
                     }
                     return true;
                 })
-                .map(config -> new InfoWrapper<>(
-                        config.name,
-                        config.description,
-                        new ParticleShader(
-                                "shaders/" + config.vertex,
-                                "shaders/" + config.geometry,
-                                "shaders/" + config.fragment
-                        )
-                ))
+                .map(config -> {
+                    try {
+                        return new InfoWrapper<>(
+                                config.name,
+                                config.description,
+                                new ParticleShader(
+                                        "shaders/" + config.vertex,
+                                        "shaders/" + config.geometry,
+                                        "shaders/" + config.fragment
+                                )
+                        );
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
 
@@ -100,14 +107,9 @@ public class ShaderProvider implements InfoWrapperProvider<ParticleShader> {
         return entries;
     }
 
-    private List<String> listFilesInShadersDirectory() {
-        try {
-            return ResourceAccess.listFiles(SHADERS_DIRECTORY).stream()
-                    .map(p -> p.getFileName().toString())
-                    .collect(Collectors.toList());
-        } catch (IOException | URISyntaxException e) {
-            e.printStackTrace();
-            return Collections.emptyList();
-        }
+    private List<String> listFilesInShadersDirectory() throws IOException {
+        return ResourceAccess.listFiles(SHADERS_DIRECTORY).stream()
+                .map(p -> p.getFileName().toString())
+                .collect(Collectors.toList());
     }
 }

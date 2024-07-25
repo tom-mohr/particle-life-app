@@ -11,7 +11,7 @@ import java.util.List;
 class MatrixGeneratorProvider implements InfoWrapperProvider<MatrixGenerator> {
 
     @Override
-    public List<InfoWrapper<MatrixGenerator>> create() {
+    public List<InfoWrapper<MatrixGenerator>> create() throws Exception {
         return List.of(
                 new InfoWrapper<>("fully random", new DefaultMatrixGenerator()),
                 new InfoWrapper<>("symmetry", size -> {

@@ -2,6 +2,8 @@ package com.particle_life.app.shaders;
 
 import org.joml.Matrix4d;
 
+import java.io.IOException;
+
 import static org.lwjgl.opengl.GL20.*;
 
 public class CursorShader {
@@ -10,7 +12,7 @@ public class CursorShader {
     private final int transformUniformLocation;
     private final float[] transform = new float[16];
 
-    public CursorShader() {
+    public CursorShader() throws IOException {
         shaderProgram = ShaderUtil.makeShaderProgram(
                 "cursor_shaders/cursor.vert",
                 null,

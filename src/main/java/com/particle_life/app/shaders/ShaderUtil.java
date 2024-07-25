@@ -2,12 +2,16 @@ package com.particle_life.app.shaders;
 
 import com.particle_life.app.io.ResourceAccess;
 
+import java.io.IOException;
+
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL32.GL_GEOMETRY_SHADER;
 
 final class ShaderUtil {
 
-    public static int makeShaderProgram(String vertexShaderResource, String geometryShaderResource, String fragmentShaderResource) {
+    public static int makeShaderProgram(String vertexShaderResource,
+                                        String geometryShaderResource,
+                                        String fragmentShaderResource) throws IOException {
         int program = glCreateProgram();
 
         glAttachShader(program, makeShaderObject(vertexShaderResource, GL_VERTEX_SHADER, "vertex"));
@@ -18,7 +22,7 @@ final class ShaderUtil {
         return program;
     }
 
-    private static int makeShaderObject(String resource, int type, String name) {
+    private static int makeShaderObject(String resource, int type, String name) throws IOException {
         String src = ResourceAccess.readTextFile(resource);
         int shaderObject = glCreateShader(type);
         glShaderSource(shaderObject, src);

@@ -3,6 +3,8 @@ package com.particle_life.app.shaders;
 import com.particle_life.app.color.Color;
 import org.joml.Matrix4d;
 
+import java.io.IOException;
+
 import static org.lwjgl.opengl.GL20.*;
 
 /**
@@ -27,7 +29,9 @@ public class ParticleShader {
 
     private final float[] transform = new float[16];
 
-    public ParticleShader(String vertexShaderResource, String geometryShaderResource, String fragmentShaderResource) {
+    public ParticleShader(String vertexShaderResource,
+                          String geometryShaderResource,
+                          String fragmentShaderResource) throws IOException {
 
         shaderProgram = ShaderUtil.makeShaderProgram(vertexShaderResource, geometryShaderResource, fragmentShaderResource);
 

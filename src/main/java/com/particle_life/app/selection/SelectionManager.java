@@ -11,10 +11,10 @@ public class SelectionManager<T> {
     private final List<InfoWrapper<T>> items = new ArrayList<>();
     private int activeIndex = 0;
 
-    public SelectionManager(InfoWrapperProvider<T> provider) {
+    public SelectionManager(InfoWrapperProvider<T> provider) throws Exception {
         List<InfoWrapper<T>> newItems = provider.create();
         if (newItems.isEmpty()) {
-            throw new RuntimeException("SelectionManager %s was initialized with zero items."
+            throw new Exception("SelectionManager %s was initialized with zero items."
                     .formatted(this.getClass().getName()));
         }
         addAll(newItems);
@@ -58,6 +58,14 @@ public class SelectionManager<T> {
             activeIndex = i;
             onActiveChanged();
         }
+    }
+
+    public void setActive(String name) {
+        int i = getIndexByName(name);
+        if (i == -1) {
+            throw new IllegalArgumentException("No item with name '%s' found in selection.".formatted(name));
+        }
+        setActive(i);
     }
 
     /**

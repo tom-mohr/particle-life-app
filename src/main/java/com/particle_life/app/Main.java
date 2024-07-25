@@ -1,4 +1,3 @@
-
 package com.particle_life.app;
 
 import com.particle_life.*;
@@ -23,8 +22,10 @@ import org.joml.Matrix4d;
 import org.joml.Vector2d;
 import org.joml.Vector3d;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 import static org.lwjgl.opengl.GL11.glEnable;
 import static org.lwjgl.opengl.GL13.GL_MULTISAMPLE;
@@ -32,13 +33,23 @@ import static org.lwjgl.opengl.GL13.GL_MULTISAMPLE;
 public class Main extends App {
 
     public static void main(String[] args) {
-        new Main().launch("Particle Life Simulator", true);
+        Main main = new Main();
+        try {
+            main.appSettings.load(SETTINGS_FILE_NAME);
+        } catch (IOException | IllegalAccessException e) {
+            main.error = new AppSettingsLoadException("Failed to load settings", e);
+        }
+        main.launch("Particle Life Simulator", main.appSettings.startInFullscreen);
     }
 
-    // data
-    private final ImFloat speedThreshold = new ImFloat(10.0f);
-    private final ImFloat colorMultiplier = new ImFloat(1.0f); // Adjust brightness or other effect
+    private AppSettings appSettings = new AppSettings();
+    private static final String SETTINGS_FILE_NAME = "settings.toml";
 
+    /* If this value is set, an error popup is displayed,
+     * waiting for the user to close the app. */
+    private Exception error = null;
+
+    // data
     private final Clock renderClock = new Clock(60);
     private SelectionManager<ParticleShader> shaders;
     private SelectionManager<Palette> palettes;
@@ -69,14 +80,6 @@ public class Main extends App {
     private int preferredNumberOfThreads;
     private int cursorParticleCount = 0;
 
-    // particle rendering: constants
-    private double zoomStepFactor = 1.2;
-    private float particleSize = 4.0f;   // particle size on screen (in pixels)
-    private boolean keepParticleSizeIndependentOfZoom = false;
-    private double shiftSmoothness = 0.3;
-    private double zoomSmoothness = 0.3;
-    private double camMovementSpeed = 1.0;
-
     // particle rendering: controls
     private boolean traces = false;
     private final Vector3d shift = new Vector3d(0);
@@ -94,20 +97,14 @@ public class Main extends App {
     boolean rightShiftPressed = false;
     boolean leftControlPressed = false;
     boolean rightControlPressed = false;
-    private int brushPower = 100;
-
-    // GUI: style
-    private float guiBackgroundAlpha = 1.0f;
 
     // GUI: constants that control how the GUI behaves
     private long physicsNotReactingThreshold = 3000;  // time in milliseconds
-    private double matrixGuiStepSize = 0.2;
     private int typeCountDiagramStepSize = 100;
     private boolean typeCountDisplayPercentage = false;
 
     // GUI: hide / show parts
     private final ImBoolean showGui = new ImBoolean(true);
-    private boolean advancedGui = true;
     private final ImBoolean showStyleEditor = new ImBoolean(false);
     private final ImBoolean showSettings = new ImBoolean(false);
     private final ImBoolean showShortcutsWindow = new ImBoolean(false);
@@ -118,38 +115,47 @@ public class Main extends App {
 
     @Override
     protected void setup() {
+        glEnable(GL_MULTISAMPLE);
+        renderer.init();
 
-        shaders = new SelectionManager<>(new ShaderProvider());
-        palettes = new SelectionManager<>(new PalettesProvider());
-        accelerators = new SelectionManager<>(new AcceleratorProvider());
-        matrixGenerators = new SelectionManager<>(new MatrixGeneratorProvider());
-        positionSetters = new SelectionManager<>(new PositionSetterProvider());
-        typeSetters = new SelectionManager<>(new TypeSetterProvider());
-        cursorShapes = new SelectionManager<>(new CursorProvider());
-        cursorActions = new SelectionManager<>(new CursorActionProvider());
+        // cursor object must be created after renderer.init()
+        try {
+            cursor = new Cursor();
+        } catch (IOException e) {
+            this.error = e;
+            return;
+        }
+
+        try {
+            shaders = new SelectionManager<>(new ShaderProvider());
+            palettes = new SelectionManager<>(new PalettesProvider());
+            accelerators = new SelectionManager<>(new AcceleratorProvider());
+            matrixGenerators = new SelectionManager<>(new MatrixGeneratorProvider());
+            positionSetters = new SelectionManager<>(new PositionSetterProvider());
+            typeSetters = new SelectionManager<>(new TypeSetterProvider());
+            cursorShapes = new SelectionManager<>(new CursorProvider());
+            cursorActions = new SelectionManager<>(new CursorActionProvider());
+        } catch (Exception e) {
+            this.error = e;
+            return;
+        }
+
+        cursor.shape = cursorShapes.getActive();  // set initial cursor shape (would be null otherwise)
+
+        try {
+            shaders.setActive(appSettings.shader);
+        } catch (IllegalArgumentException e) {
+            // todo: emit warning
+            shaders.setActive(0);
+        }
 
         createPhysics();
 
         // set default selection for palette
-        String preferredPaletteName = "RainbowSmooth12.map";
-        if (palettes.hasName(preferredPaletteName)) {
-            palettes.setActive(palettes.getIndexByName(preferredPaletteName));
+        if (palettes.hasName(appSettings.palette)) {
+            palettes.setActive(palettes.getIndexByName(appSettings.palette));
         }
-
-        glEnable(GL_MULTISAMPLE);
-
-        renderer.init();
-
-        // cursor object must be created after renderer.init()
-        cursor = new Cursor();
-        cursor.shape = cursorShapes.getActive();  // set initial cursor shape (would be null otherwise)
     }
-
-
-
-
-
-
 
     private void createPhysics() {
         physics = new ExtendedPhysics(
@@ -170,6 +176,34 @@ public class Main extends App {
 
     @Override
     protected void beforeClose() {
+
+        // try to save app settings
+        if (this.error == null || !(this.error instanceof AppSettingsLoadException)) {
+            // Don't save settings if the app settings could not
+            // be loaded properly (which is where an
+            // AppSettingsException would be thrown).
+            // Why? Because in this case, the settings would be
+            // just the defaults and the user would lose their
+            // actual settings, as they would be overwritten.
+
+            // Here, we also need to save all the app settings
+            // that are stored outside the app settings object
+            // during runtime.
+            appSettings.palette = palettes.getActiveName();
+            appSettings.shader = shaders.getActiveName();
+            // Note: Why are we not storing the fullscreen state here?
+            // I.e. why not appSettings.startInFullscreen = isFullscreen()?
+            // Because here, the glfw window is already closed,
+            // and we can't access the fullscreen state anymore.
+            // (That's why we override App.setFullscreen().)
+
+            try {
+                appSettings.save(SETTINGS_FILE_NAME);
+            } catch (IOException | IllegalAccessException e) {
+                e.printStackTrace();
+            }
+        }
+
         try {
             loop.stop(1000);
             physics.shutdown(1000);
@@ -182,9 +216,30 @@ public class Main extends App {
 
     @Override
     protected void draw(double dt) {
+        if (this.error == null) {
+            renderClock.tick();
+            updateCanvas();
+            ImGui.newFrame();
+            // Any Dear ImGui code must go between ImGui.newFrame() and ImGui.render()
+            if (!traces && showGui.get()) buildGui();
+            ImGui.render();
+            setShaderVariables();
+            if (!traces || !tracesBefore) renderer.clear();
+            tracesBefore = traces;
+            renderer.run(transform, cursor, ImGui.getDrawData(), width, height);  // draw particles and GUI
+        } else {
+            ImGui.newFrame();
+            buildErrorGui();
+            ImGui.render();
+            renderer.clear();
+            renderer.run(transform, cursor, ImGui.getDrawData(), width, height);  // draw GUI
+        }
+    }
 
-        renderClock.tick();
-
+    /**
+     * Render particles, cursor etc., i.e. everything except the GUI elements.
+     */
+    private void updateCanvas() {
         // util object for later use
         Coordinates coordinates = new Coordinates(width, height, shift, zoom);
 
@@ -200,19 +255,26 @@ public class Main extends App {
             shiftGoal.set(shift);  // don't use smoothing while dragging
         }
 
-        double camMovementStepSize = camMovementSpeed / zoom;
+        double camMovementStepSize = appSettings.camMovementSpeed / zoom;
         camMovementStepSize *= renderClock.getDtMillis() / 1000.0;  // keep constant speed regardless of framerate
         if (leftPressed) shiftGoal.add(camMovementStepSize, 0.0, 0.0);
         if (rightPressed) shiftGoal.add(-camMovementStepSize, 0.0, 0.0);
         if (upPressed) shiftGoal.add(0.0, camMovementStepSize, 0.0);
         if (downPressed) shiftGoal.add(0.0, -camMovementStepSize, 0.0);
 
-        shift.lerp(shiftGoal, shiftSmoothness);
-        zoom = MathUtils.lerp(zoom, zoomGoal, zoomSmoothness);
+        shift.lerp(shiftGoal, appSettings.shiftSmoothness);
+        zoom = MathUtils.lerp(zoom, zoomGoal, appSettings.zoomSmoothness);
 
         if (draggingParticles) {
 
-            final Cursor cursorCopy = cursor.copy();  // need to copy for async access in loop.enqueue()
+            // need to copy for async access in loop.enqueue()
+            final Cursor cursorCopy;
+            try {
+                cursorCopy = cursor.copy();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
             // execute cursor action
             switch (cursorActions.getActive()) {
                 case MOVE -> {
@@ -228,7 +290,7 @@ public class Main extends App {
                     });
                 }
                 case BRUSH -> {
-                    final int addCount = brushPower;
+                    final int addCount = appSettings.brushPower;
                     loop.enqueue(() -> {
                         int prevLength = physics.particles.length;
                         physics.particles = Arrays.copyOf(physics.particles, prevLength + addCount);
@@ -293,33 +355,41 @@ public class Main extends App {
             mouseX += 1;
             mouseY += 1;
         }
-
-        ImGui.newFrame();
-        // Any Dear ImGui code must go between ImGui.newFrame() and ImGui.render()
-        if (!traces && showGui.get()) {
-            buildGui();
-        }
-        ImGui.render();
-
-        setShaderVariables();
-
-        if (!traces || !tracesBefore) renderer.clear();
-        tracesBefore = traces;
-        renderer.run(transform, cursor, ImGui.getDrawData(), width, height);  // draw particles and GUI
     }
 
+    private void buildErrorGui() {
+        ImGui.setNextWindowBgAlpha(appSettings.guiBackgroundAlpha);
+        ImGui.setNextWindowSize(-1, -1);
+        if (ImGui.begin("Error", new ImBoolean(true), ImGuiWindowFlags.None)) {
+            ImGui.textColored(255, 0, 0, 255, this.error.getMessage());
+            if (ImGui.treeNode("Details")) {
+                ImGui.text(this.error.toString());
+                for (StackTraceElement element : this.error.getStackTrace()) {
+                    ImGui.text(element.toString());
+                }
+                if (ImGui.button("Copy")) {
+                    String text = this.error.toString() + "\n" +
+                            Arrays.stream(this.error.getStackTrace())
+                                    .map(StackTraceElement::toString)
+                                    .collect(Collectors.joining("\n"));
+                    ImGui.setClipboardText(text);
+                }
+                ImGui.treePop();
+            }
+            if (ImGui.button("Close App")) close();  // kill whole app
+            ImGui.end();
+        }
+    }
 
-    
     private void buildGui() {
 
-        ImGui.setNextWindowBgAlpha(guiBackgroundAlpha);
+        ImGui.setNextWindowBgAlpha(appSettings.guiBackgroundAlpha);
         ImGui.setNextWindowPos(0, 0);
         ImGui.setNextWindowSize(-1, height);
         if (showGui.get()) {
             if (ImGui.begin("App", showGui, ImGuiWindowFlags.None
                     | ImGuiWindowFlags.NoResize
-                    | ImGuiWindowFlags.NoFocusOnAppearing
-                    | ImGuiWindowFlags.NoBringToFrontOnFocus
+                    | ImGuiWindowFlags.NoNavFocus
                     | ImGuiWindowFlags.NoTitleBar
                     | ImGuiWindowFlags.MenuBar)) {
 
@@ -334,7 +404,7 @@ public class Main extends App {
                     statsFormatter.start();
                     statsFormatter.put("Graphics FPS", String.format("%.0f", renderClock.getAvgFramerate()));
                     statsFormatter.put("Physics FPS", loop.getAvgFramerate() < 100000 ? String.format("%.0f", loop.getAvgFramerate()) : "inf");
-                    if (advancedGui) {
+                    if (appSettings.showAdvancedGui) {
                         statsFormatter.put("Physics vs. Graphics", loop.getAvgFramerate() < 100000 ? String.format("%.2f", loop.getAvgFramerate() / renderClock.getAvgFramerate()) : "inf");
                         //todo display when functional: statsFormatter.put("Particles in Cursor", String.valueOf(cursorParticleCount));
                     }
@@ -364,7 +434,7 @@ public class Main extends App {
                             loop.enqueue(() -> physics.setMatrixSize(newSize));
                         }
 
-                        if (advancedGui) {
+                        if (appSettings.showAdvancedGui) {
 
                             ImGuiBarGraph.draw(200, 100,
                                     palettes.getActive(),
@@ -386,12 +456,12 @@ public class Main extends App {
                         // MATRIX
                         ImGuiMatrix.draw(200 * scale, 200 * scale,
                                 palettes.getActive(),
-                                matrixGuiStepSize,
+                                appSettings.matrixGuiStepSize,
                                 settings.matrix,
                                 (i, j, newValue) -> loop.enqueue(() -> physics.settings.matrix.set(i, j, newValue))
                         );
 
-                        if (advancedGui) {
+                        if (appSettings.showAdvancedGui) {
                             ImGui.text("Clipboard:");
                             ImGui.sameLine();
                             if (ImGui.button("Copy")) {
@@ -460,7 +530,7 @@ public class Main extends App {
                     }
 
                     // ACCELERATORS
-                    if (advancedGui) {
+                    if (appSettings.showAdvancedGui) {
                         ImGui.text("Accelerator [v]");
                         if (renderCombo("##accelerator", accelerators)) {
                             final Accelerator nextAccelerator = accelerators.getActive();
@@ -483,24 +553,25 @@ public class Main extends App {
                     ImGuiUtils.helpMarker("determines if the boardering space wraps around or not");
 
                     // SliderFloat Block
-{
-    float displayValue = (float) settings.rmax;
-    float[] rmaxSliderValue = new float[]{displayValue};
-    if (ImGui.sliderFloat("rmax##Slider", rmaxSliderValue, 0.005f, 1.000f, String.format("%.3f", displayValue), ImGuiSliderFlags.Logarithmic)) {
-        final float newRmax = rmaxSliderValue[0];
-        loop.enqueue(() -> physics.settings.rmax = newRmax);
-    }
-}
-ImGui.sameLine();
-ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
-// InputFloat Block
-{
-    ImFloat rmaxInputValue = new ImFloat((float) settings.rmax);
-    if (ImGui.inputFloat("rmax##Input", rmaxInputValue, 0.005f, 1.000f, "%.3f", ImGuiInputTextFlags.EnterReturnsTrue)) {
-        final float newRmax = Math.max(0.005f, Math.min(rmaxInputValue.get(), 1.000f)); // Clamping the value within a range
-        loop.enqueue(() -> physics.settings.rmax = newRmax);
-    }
-}
+                    {
+                        float displayValue = (float) settings.rmax;
+                        float[] rmaxSliderValue = new float[]{displayValue};
+                        if (ImGui.sliderFloat("rmax##Slider", rmaxSliderValue, 0.005f, 1.000f, String.format("%.3f", displayValue), ImGuiSliderFlags.Logarithmic)) {
+                            final float newRmax = rmaxSliderValue[0];
+                            loop.enqueue(() -> physics.settings.rmax = newRmax);
+                        }
+                    }
+                    ImGui.sameLine();
+                    ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
+
+                    // InputFloat Block
+                    {
+                        ImFloat rmaxInputValue = new ImFloat((float) settings.rmax);
+                        if (ImGui.inputFloat("rmax##Input", rmaxInputValue, 0.005f, 1.000f, "%.3f", ImGuiInputTextFlags.EnterReturnsTrue)) {
+                            final float newRmax = Math.max(0.005f, Math.min(rmaxInputValue.get(), 1.000f)); // Clamping the value within a range
+                            loop.enqueue(() -> physics.settings.rmax = newRmax);
+                        }
+                    }
 
                     {// FRICTION
                         float[] frictionSliderValue = new float[]{(float) settings.velocityHalfLife};
@@ -519,8 +590,8 @@ ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
                         if (ImGui.inputFloat("friction##Input", frictionfactorInputValue, 0.005f, 1.000f, "%.04f", ImGuiInputTextFlags.EnterReturnsTrue)) {
                             final float newFrictionFactor = Math.max(0.005f, Math.min(frictionfactorInputValue.get(), 1.000f)); // Clamping the value within a range
                             loop.enqueue(() -> physics.settings.velocityHalfLife = newFrictionFactor);
-                            }
                         }
+                    }
                     float[] forceFactorSliderValue = new float[]{(float) settings.force};
                     if (ImGui.sliderFloat("force scaling", forceFactorSliderValue, 0.0f, 100.0f)) {
                         final float newForceFactor = forceFactorSliderValue[0];
@@ -531,14 +602,14 @@ ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
                     ImGuiUtils.helpMarker("The value of force between particles");
 
                     {
-                    ImFloat forcefactorInputValue = new ImFloat((float) settings.force);
-                    if (ImGui.inputFloat("force##Input", forcefactorInputValue, 0.005f, 1.000f, "%.04f", ImGuiInputTextFlags.EnterReturnsTrue)) {
-                        final float newForceFactor = Math.max(0.005f, Math.min(forcefactorInputValue.get(), 1000.000f)); // Clamping the value within a range
-                        loop.enqueue(() -> physics.settings.force = newForceFactor);
+                        ImFloat forcefactorInputValue = new ImFloat((float) settings.force);
+                        if (ImGui.inputFloat("force##Input", forcefactorInputValue, 0.005f, 1.000f, "%.04f", ImGuiInputTextFlags.EnterReturnsTrue)) {
+                            final float newForceFactor = Math.max(0.005f, Math.min(forcefactorInputValue.get(), 1000.000f)); // Clamping the value within a range
+                            loop.enqueue(() -> physics.settings.force = newForceFactor);
                         }
                     }
 
-                    if (advancedGui) {
+                    if (appSettings.showAdvancedGui) {
 
                         ImGui.separator();
 
@@ -589,9 +660,9 @@ ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
                     ImGui.sameLine();
                     ImGuiUtils.helpMarker("color of particles");
 
-                    float[] particleSizeSliderValue = new float[]{particleSize};
+                    float[] particleSizeSliderValue = new float[]{appSettings.particleSize};
                     if (ImGui.sliderFloat("particle size [ctrl+scroll]", particleSizeSliderValue, 0.1f, 10f)) {
-                        particleSize = particleSizeSliderValue[0];
+                        appSettings.particleSize = particleSizeSliderValue[0];
                     }
                     ImGui.sameLine();
                     ImGuiUtils.helpMarker("How large the particles are displayed.");
@@ -601,7 +672,7 @@ ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
                     }
 
                     // CURSOR
-                    if (advancedGui) {
+                    if (appSettings.showAdvancedGui) {
                         ImGui.text("Cursor");
                         renderCombo("##cursoraction", cursorActions);
                         renderCombo("##cursor", cursorShapes);
@@ -620,9 +691,9 @@ ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
                         }
                         if (cursorActions.getActive() == CursorAction.BRUSH) {
                             // brush power slider
-                            int[] brushPowerSliderValue = new int[]{brushPower};
+                            int[] brushPowerSliderValue = new int[]{appSettings.brushPower};
                             if (ImGui.sliderInt("brush power", brushPowerSliderValue, 1, 100)) {
-                                brushPower = brushPowerSliderValue[0];
+                                appSettings.brushPower = brushPowerSliderValue[0];
                             }
                         }
 
@@ -646,25 +717,20 @@ ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
             ImGui.text("Physics didn't react since %4.1f seconds.".formatted(physicsNotReactingSince / 1000.0));
 
             if (ImGui.button("Try Reset")) {
-  
-                        
                 try {
                     if (loop.stop(1000)) {
                         physics.shutdown(1000);
                         createPhysics();
                     } else {
                         ImGui.openPopup("Taking too long");
-
-                      
                     }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
-                    //todo: How should this be handled?
                 }
             }
 
             if (ImGui.button("particle count = 0?")) {
-                            loop.enqueue(() -> physics.setParticleCount(0));
+                loop.enqueue(() -> physics.setParticleCount(0));
             }
 
             if (ImGui.beginPopupModal("Taking too long")) {
@@ -679,15 +745,13 @@ ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
                     close();// kill whole app
                 }
 
-                
-
                 ImGui.endPopup();
             }
 
             ImGui.endPopup();
         }
 
-        ImGui.setNextWindowBgAlpha(guiBackgroundAlpha);
+        ImGui.setNextWindowBgAlpha(appSettings.guiBackgroundAlpha);
         ImGui.setNextWindowSize(400 * scale, 400 * scale, ImGuiCond.Once);
         ImGui.setNextWindowPos((width - 400 * scale) / 2f, (height - 400 * scale) / 2f, ImGuiCond.Once);
         if (showSettings.get() && showGui.get()) {
@@ -696,35 +760,35 @@ ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
                     | ImGuiWindowFlags.NoFocusOnAppearing)) {
 
                 {
-                    float[] inputValue = new float[]{(float) camMovementSpeed};
+                    float[] inputValue = new float[]{(float) appSettings.camMovementSpeed};
                     if (ImGui.sliderFloat("Cam Speed", inputValue, 0.0f, 2.0f, "%0.2f")) {
-                        camMovementSpeed = inputValue[0];
+                        appSettings.camMovementSpeed = inputValue[0];
                     }
                 }
 
                 {
-                    float[] inputValue = new float[]{(float) (1.0 - zoomSmoothness)};
+                    float[] inputValue = new float[]{(float) (1.0 - appSettings.zoomSmoothness)};
                     if (ImGui.sliderFloat("Cam Smoothing", inputValue, 0.0f, 1.0f, "%0.2f")) {
-                        zoomSmoothness = 1.0 - inputValue[0];
-                        shiftSmoothness = 1.0 - inputValue[0];
+                        appSettings.zoomSmoothness = 1.0 - inputValue[0];
+                        appSettings.shiftSmoothness = 1.0 - inputValue[0];
                     }
                 }
 
                 {
-                    float[] inputValue = new float[]{(float) (zoomStepFactor - 1) * 100};
+                    float[] inputValue = new float[]{(float) (appSettings.zoomStepFactor - 1) * 100};
                     if (ImGui.sliderFloat("Zoom Step", inputValue, 0.0f, 100.0f, "%.1f%%", ImGuiSliderFlags.Logarithmic)) {
-                        zoomStepFactor = 1 + inputValue[0] * 0.01;
+                        appSettings.zoomStepFactor = 1 + inputValue[0] * 0.01;
                     }
                 }
 
-                if (ImGui.checkbox("make particle size zoom-independent", keepParticleSizeIndependentOfZoom)) {
-                    keepParticleSizeIndependentOfZoom ^= true;
+                if (ImGui.checkbox("make particle size zoom-independent", appSettings.keepParticleSizeIndependentOfZoom)) {
+                    appSettings.keepParticleSizeIndependentOfZoom ^= true;
                 }
 
                 {
-                    float[] inputValue = new float[]{guiBackgroundAlpha};
+                    float[] inputValue = new float[]{appSettings.guiBackgroundAlpha};
                     if (ImGui.sliderFloat("GUI Opacity", inputValue, 0.0f, 1.0f)) {
-                        guiBackgroundAlpha = inputValue[0];
+                        appSettings.guiBackgroundAlpha = inputValue[0];
                     }
                 }
 
@@ -734,9 +798,9 @@ ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
                     ImGui.indent();
 
                     {
-                        ImFloat inputValue = new ImFloat((float) matrixGuiStepSize);
+                        ImFloat inputValue = new ImFloat((float) appSettings.matrixGuiStepSize);
                         if (ImGui.inputFloat("Step Size##Matrix", inputValue, 0.05f, 0.05f, "%.2f")) {
-                            matrixGuiStepSize = MathUtils.constrain(inputValue.get(), 0.05f, 1.0f);
+                            appSettings.matrixGuiStepSize = MathUtils.constrain(inputValue.get(), 0.05f, 1.0f);
                         }
                     }
 
@@ -861,8 +925,8 @@ ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
                 showGui.set(false);
             }
 
-            if (ImGui.menuItem("Advanced GUI", "a", advancedGui)) {
-                advancedGui ^= true;
+            if (ImGui.menuItem("Advanced GUI", "a", appSettings.showAdvancedGui)) {
+                appSettings.showAdvancedGui ^= true;
             }
 
             ImGui.endMenu();
@@ -927,13 +991,13 @@ ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
         particleShader.setTime(System.nanoTime() / 1000_000_000.0f);
         particleShader.setPalette(colors);
         particleShader.setTransform(transform);
-        particleShader.setSize(particleSize / Math.min(width, height) / (keepParticleSizeIndependentOfZoom ? (float) zoom : 1));
+        particleShader.setSize(appSettings.particleSize / Math.min(width, height) / (appSettings.keepParticleSizeIndependentOfZoom ? (float) zoom : 1));
         particleShader.setDetail(MathUtils.constrain(getDetailFromZoom(), ParticleShader.MIN_DETAIL, ParticleShader.MAX_DETAIL));
     }
 
     private int getDetailFromZoom() {
 
-        double particleSizeOnScreen = keepParticleSizeIndependentOfZoom ? particleSize : particleSize * zoom;
+        double particleSizeOnScreen = appSettings.keepParticleSizeIndependentOfZoom ? appSettings.particleSize : appSettings.particleSize * zoom;
 
         double minDetailSize = 4;  // at this size, the detail is 4
         double detailPerSize = 0.4;// from then on, the detail increases with this rate (per size on screen in pixels)
@@ -956,7 +1020,7 @@ ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
             case "RIGHT_SHIFT" -> rightShiftPressed = true;
             case "LEFT_CONTROL" -> leftControlPressed = true;
             case "RIGHT_CONTROL" -> rightControlPressed = true;
-            case "a" -> advancedGui ^= true;
+            case "a" -> appSettings.showAdvancedGui ^= true;
             case "c" -> traces ^= true;
             case "h" -> {
                 if (traces) {
@@ -970,8 +1034,8 @@ ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
             case "L" -> palettes.stepBackward();
             case "s" -> shaders.stepForward();
             case "S" -> shaders.stepBackward();
-            case "+", "=" -> zoomGoal *= Math.pow(zoomStepFactor, 2);// more steps than when scrolling
-            case "-" -> zoomGoal = Math.max(MIN_ZOOM, zoomGoal / Math.pow(zoomStepFactor, 2));
+            case "+", "=" -> zoomGoal *= Math.pow(appSettings.zoomStepFactor, 2);// more steps than when scrolling
+            case "-" -> zoomGoal = Math.max(MIN_ZOOM, zoomGoal / Math.pow(appSettings.zoomStepFactor, 2));
             case "z" -> resetCamera(true);
             case "Z" -> {
                 resetCamera(true);
@@ -1064,14 +1128,14 @@ ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
             // nothing
         } else if (controlPressed) {
             // change particle size
-            particleSize *= Math.pow(1.2, -y);
+            appSettings.particleSize *= Math.pow(1.2, -y);
         } else if (shiftPressed) {
             // change cursor size
             cursor.size *= Math.pow(1.2, -y);
         } else {
             // change camera zoom
 
-            double zoomIncrease = Math.pow(zoomStepFactor, y);
+            double zoomIncrease = Math.pow(appSettings.zoomStepFactor, y);
 
             Coordinates c = new Coordinates(width, height, shiftGoal, zoomGoal);  // use "goal" shift and zoom
             c.zoomInOnMouse(new Vector2d(mouseX, mouseY), Math.max(MIN_ZOOM, zoomGoal * zoomIncrease));
@@ -1079,5 +1143,13 @@ ImGuiUtils.helpMarker("rmax is the radius for particles to interact");
             zoomGoal = c.zoom;
             shiftGoal.set(c.shift);
         }
+    }
+
+    @Override
+    protected void setFullscreen(boolean fullscreen) {
+        super.setFullscreen(fullscreen);
+
+        // remember fullscreen state for next startup
+        appSettings.startInFullscreen = fullscreen;
     }
 }

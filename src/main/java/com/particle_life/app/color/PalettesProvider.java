@@ -16,7 +16,7 @@ import java.util.Optional;
 public class PalettesProvider implements InfoWrapperProvider<Palette> {
 
     @Override
-    public List<InfoWrapper<Palette>> create() {
+    public List<InfoWrapper<Palette>> create() throws Exception {
         List<InfoWrapper<Palette>> palettes = new ArrayList<>();
 
         palettes.add(new InfoWrapper<>("Digital Rainbow", new FallbackPalette()));

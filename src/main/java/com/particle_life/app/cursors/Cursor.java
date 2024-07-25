@@ -6,6 +6,7 @@ import com.particle_life.app.shaders.CursorShader;
 import org.joml.Matrix4d;
 import org.joml.Vector3d;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,7 +16,10 @@ public class Cursor {
     public double size = 0.1;
     public CursorShape shape;
 
-    private CursorShader cursorShader;
+    private final CursorShader cursorShader = new CursorShader();
+
+    public Cursor() throws IOException {
+    }
 
     public boolean isInside(Particle particle, Physics physics) {
         if (size == 0.0) return false;
@@ -31,7 +35,6 @@ public class Cursor {
     }
 
     public void draw(Matrix4d transform) {
-        if (cursorShader == null) cursorShader = new CursorShader();  // lazy load shader
         cursorShader.use();
         cursorShader.setTransform(transform
                 .translate(position)
@@ -45,7 +48,7 @@ public class Cursor {
         return shape.sampleRandomPoint().mul(size).add(position);
     }
 
-    public Cursor copy() {
+    public Cursor copy() throws IOException {
         Cursor c = new Cursor();
         c.position.set(position);
         c.size = size;
