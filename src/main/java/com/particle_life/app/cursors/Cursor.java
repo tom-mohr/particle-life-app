@@ -34,6 +34,14 @@ public class Cursor {
         return selectedParticles;
     }
 
+    public int countSelection(Physics physics) {
+        int count = 0;
+        for (Particle particle : physics.particles) {
+            if (isInside(particle, physics)) count++;
+        }
+        return count;
+    }
+
     public void draw(Matrix4d transform) {
         cursorShader.use();
         cursorShader.setTransform(transform

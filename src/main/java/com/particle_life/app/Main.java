@@ -70,6 +70,14 @@ public class Main extends App {
     private Loop loop;
     private boolean autoDt = true;
     private double fallbackDt = 0.02;
+    /**
+     * The snapshot is used to store a deep copy of the physics state
+     * (particles, physics settings, ...) just for this thread,
+     * so that the physics simulation can continue modifying the data
+     * in different threads in the meantime.
+     * Otherwise, the renderer could get in trouble if it tries to
+     * access the data while it is being modified by the physics simulation.
+     */
     private PhysicsSnapshot physicsSnapshot;
     private final LoadDistributor physicsSnapshotLoadDistributor = new LoadDistributor();  // speed up taking snapshots with parallelization
     public AtomicBoolean newSnapshotAvailable = new AtomicBoolean(false);
@@ -265,6 +273,20 @@ public class Main extends App {
         shift.lerp(shiftGoal, appSettings.shiftSmoothness);
         zoom = MathUtils.lerp(zoom, zoomGoal, appSettings.zoomSmoothness);
 
+        // count particles under cursor
+        // Note: This looks like it could lead to problems if Physics changes the particle array while this executes.
+        // However, this is fine as it would only lead to a wrong count, but not to an exception or crash.
+        // Why? Because the garbage collector won't delete the particle array while countSelection() is still iterating
+        // over it.
+        // I admit that this is not a clean solution, but anything else would have required too many changes to the code
+        // base, i.e. would have been overkill for this simple task.
+        // A 100% safe way would be to use the following:
+        //     loop.enqueue(() -> cursorParticleCount = cursor.countSelection(physics));
+        // But this would make the particle count laggy if the physics simulation is slow,
+        // and I find it a better user experience to have the particle count ALWAYS update in real time.
+        cursorParticleCount = cursor.countSelection(physics);
+
+        // cursor actions
         if (draggingParticles) {
 
             // need to copy for async access in loop.enqueue()
@@ -330,12 +352,10 @@ public class Main extends App {
 
             // get local copy of snapshot
 
-            //todo: only write types if necessary?
             renderer.bufferParticleData(physicsSnapshot.positions, physicsSnapshot.velocities, physicsSnapshot.types);
             settings = physicsSnapshot.settings.deepCopy();
             particleCount = physicsSnapshot.particleCount;
             preferredNumberOfThreads = physics.preferredNumberOfThreads;
-            // todo: make this in a clean async way: cursorParticleCount = cursors.getActive().object.getSelection(physics).size();
 
             newSnapshotAvailable.set(false);
         }
@@ -406,7 +426,7 @@ public class Main extends App {
                     statsFormatter.put("Physics FPS", loop.getAvgFramerate() < 100000 ? String.format("%.0f", loop.getAvgFramerate()) : "inf");
                     if (appSettings.showAdvancedGui) {
                         statsFormatter.put("Physics vs. Graphics", loop.getAvgFramerate() < 100000 ? String.format("%.2f", loop.getAvgFramerate() / renderClock.getAvgFramerate()) : "inf");
-                        //todo display when functional: statsFormatter.put("Particles in Cursor", String.valueOf(cursorParticleCount));
+                        statsFormatter.put("Particles under cursor", String.valueOf(cursorParticleCount));
                     }
                     statsFormatter.end();
                 }

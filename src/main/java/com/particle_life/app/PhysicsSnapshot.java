@@ -34,9 +34,6 @@ class PhysicsSnapshot {
     }
 
     private void write(Particle[] particles, LoadDistributor loadDistributor) {
-
-        //todo: only write types if necessary!
-
         int n = particles.length;
 
         if (types == null || types.length != n) {
