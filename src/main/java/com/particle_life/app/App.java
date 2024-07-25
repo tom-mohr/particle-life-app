@@ -3,9 +3,15 @@ package com.particle_life.app;
 import com.particle_life.Clock;
 import org.lwjgl.Version;
 import org.lwjgl.glfw.GLFWErrorCallback;
+import org.lwjgl.glfw.GLFWImage;
 import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
+import org.lwjgl.stb.STBImage;
 import org.lwjgl.system.MemoryStack;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 
 import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
 import static org.lwjgl.glfw.GLFW.*;
@@ -33,10 +39,10 @@ public abstract class App {
     private int windowWidth = -1;
     private int windowHeight = -1;
 
-    public void launch(String title, boolean fullscreen) {
+    public void launch(String title, boolean fullscreen, String iconPath) {
         System.out.println("Using LWJGL " + Version.getVersion());
 
-        init(title, fullscreen);
+        init(title, fullscreen, iconPath);
 
         // This line is critical for LWJGL's interoperation with GLFW's
         // OpenGL context, or any context that is managed externally.
@@ -89,7 +95,7 @@ public abstract class App {
         imGuiLayer.destroyImGui();
     }
 
-    private void init(String title, boolean fullscreen) {
+    private void init(String title, boolean fullscreen, String iconPath) {
         // Setup an error callback. The default implementation
         // will print the error message in System.err.
         GLFWErrorCallback.createPrint(System.err).set();
@@ -136,6 +142,15 @@ public abstract class App {
 
         if (window == NULL) throw new RuntimeException("Failed to create the GLFW window");
 
+        // set window icon
+        try {
+            setWindowIcon(iconPath);
+        } catch (IOException e) {
+            System.err.println("Failed to set window icon: " + e.getMessage());
+            e.printStackTrace();
+            // just continue without icon
+        }
+
         // Get the thread stack and push a new frame
         try (MemoryStack stack = stackPush()) {
 
@@ -152,6 +167,22 @@ public abstract class App {
 
         // Make the window visible
         glfwShowWindow(window);
+    }
+
+    private void setWindowIcon(String iconPath) throws IOException {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            IntBuffer width = stack.mallocInt(1);
+            IntBuffer height = stack.mallocInt(1);
+            IntBuffer channels = stack.mallocInt(1);
+            ByteBuffer pixels = STBImage.stbi_load(iconPath, width, height, channels, 4);
+            if (pixels == null) {
+                throw new IOException("Failed to load window icon: " + STBImage.stbi_failure_reason());
+            }
+            try (GLFWImage imageBuffer = GLFWImage.malloc()) {
+                imageBuffer.set(width.get(0), height.get(0), pixels);
+                nglfwSetWindowIcon(window, 1, imageBuffer.address());
+            }
+        }
     }
 
     private void setCallbacks(ImGuiLayer imGuiLayer) {

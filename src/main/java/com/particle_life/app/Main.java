@@ -39,7 +39,7 @@ public class Main extends App {
         } catch (IOException | IllegalAccessException e) {
             main.error = new AppSettingsLoadException("Failed to load settings", e);
         }
-        main.launch("Particle Life Simulator", main.appSettings.startInFullscreen);
+        main.launch("Particle Life Simulator", main.appSettings.startInFullscreen, "favicon.png");
     }
 
     private AppSettings appSettings = new AppSettings();
