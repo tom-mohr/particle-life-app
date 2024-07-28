@@ -1,7 +1,6 @@
 package com.particle_life.app.cursors;
 
 import com.particle_life.Particle;
-import com.particle_life.Physics;
 import com.particle_life.app.shaders.CursorShader;
 import org.joml.Matrix4d;
 import org.joml.Vector3d;
@@ -21,23 +20,38 @@ public class Cursor {
     public Cursor() throws IOException {
     }
 
-    public boolean isInside(Particle particle, Physics physics) {
+    public boolean isInside(Particle particle, boolean wrap) {
         if (size == 0.0) return false;
-        return shape.isInside(physics.connection(position, particle.position).div(size));
+
+        Vector3d delta = new Vector3d(particle.position).sub(position);
+
+        if (wrap) {
+            // wrapping the connection gives us the shortest possible distance
+            // assume periodic boundaries [-1, 1)
+            for (int i = 0; i < 3; i++) {
+                double val = delta.get(i);
+                if (val >= 1.0) delta.setComponent(i, val - 2.0);
+                else if (val < -1.0) delta.setComponent(i, val + 2.0);
+            }
+        }
+
+        Vector3d deltaNormalized = delta.div(size);  // relative to cursor size
+
+        return shape.isInside(deltaNormalized);
     }
 
-    public List<Particle> getSelection(Physics physics) {
+    public List<Particle> getSelection(Particle[] particles, boolean wrap) {
         List<Particle> selectedParticles = new ArrayList<>();
-        for (Particle particle : physics.particles) {
-            if (isInside(particle, physics)) selectedParticles.add(particle);
+        for (Particle particle : particles) {
+            if (isInside(particle, wrap)) selectedParticles.add(particle);
         }
         return selectedParticles;
     }
 
-    public int countSelection(Physics physics) {
+    public int countSelection(Particle[] particles, boolean wrap) {
         int count = 0;
-        for (Particle particle : physics.particles) {
-            if (isInside(particle, physics)) count++;
+        for (Particle particle : particles) {
+            if (isInside(particle, wrap)) count++;
         }
         return count;
     }

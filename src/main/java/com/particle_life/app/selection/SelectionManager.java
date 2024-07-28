@@ -60,7 +60,19 @@ public class SelectionManager<T> {
         }
     }
 
-    public void setActive(String name) {
+    public void setActive(T item) {
+        int i = 0;
+        for (InfoWrapper<T> infoWrapper : items) {
+            if (infoWrapper.object.equals(item)) {
+                setActive(i);
+                return;
+            }
+            i++;
+        }
+        throw new IllegalArgumentException("Item not found in selection.");
+    }
+
+    public void setActiveByName(String name) {
         int i = getIndexByName(name);
         if (i == -1) {
             throw new IllegalArgumentException("No item with name '%s' found in selection.".formatted(name));

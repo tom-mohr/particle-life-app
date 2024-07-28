@@ -32,16 +32,24 @@ public class AppSettings extends TomlFile {
     public double zoomSmoothness = 0.3;
     @TomlKey("cam_movement_speed")
     public double camMovementSpeed = 1.0;
+    @TomlKey("show_cursor")
+    public boolean showCursor = true;
+    @TomlKey("cursor_size")
+    public double cursorSize = 0.1;
+    @TomlKey("cursor_action_left")
+    public String cursorActionLeft = "Move";
+    @TomlKey("cursor_action_right")
+    public String cursorActionRight = "Delete";
     @TomlKey("brush_power")
     public int brushPower = 100;
-    @TomlKey("gui_background_alpha")
-    public float guiBackgroundAlpha = 1.0f;
     @TomlKey("matrix_step_size")
     public double matrixGuiStepSize = 0.2;
-    @TomlKey("show_advanced_gui")
-    public boolean showAdvancedGui = true;
     @TomlKey("palette")
     public String palette = "RainbowSmooth12.map";
     @TomlKey("shader")
     public String shader = "default";
+    @TomlKey("time_step")
+    public double dt = 0.02;
+    @TomlKey("auto_time_step")
+    public boolean autoDt = true;
 }

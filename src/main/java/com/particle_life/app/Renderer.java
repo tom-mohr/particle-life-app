@@ -20,7 +20,6 @@ class Renderer {
     private int vboT;
 
     public ParticleShader particleShader = null;
-    public boolean drawCursor = false;
     private final ImGuiImplGl3 imGuiGl3 = new ImGuiImplGl3();
     /**
      * Remember the last buffered size in order to use subBufferData instead of bufferData whenever possible.
@@ -110,7 +109,7 @@ class Renderer {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear the framebuffer
     }
 
-    void run(Matrix4d transform, Cursor cursor, ImDrawData imDrawData, int width, int height) {
+    void run(Matrix4d transform, boolean drawCursor, Cursor cursor, ImDrawData imDrawData, int width, int height) {
 
         // draw particles
         if (particleShader != null && lastBufferedSize > 0) {

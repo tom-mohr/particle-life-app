@@ -3,10 +3,7 @@ package com.particle_life.app;
 import imgui.*;
 import imgui.callback.ImStrConsumer;
 import imgui.callback.ImStrSupplier;
-import imgui.flag.ImGuiBackendFlags;
-import imgui.flag.ImGuiConfigFlags;
-import imgui.flag.ImGuiKey;
-import imgui.flag.ImGuiMouseCursor;
+import imgui.flag.*;
 import org.lwjgl.glfw.*;
 
 import java.util.ArrayList;
@@ -182,51 +179,41 @@ public class ImGuiLayer {
             }
         });
 
-        // ------------------------------------------------------------
-        // Fonts configuration
-        // Read: https://raw.githubusercontent.com/ocornut/imgui/master/docs/FONTS.txt
-
-//        final ImFontAtlas fontAtlas = io.getFonts();
-//        final ImFontConfig fontConfig = new ImFontConfig(); // Natively allocated object, should be explicitly destroyed
-//
-//        // Glyphs could be added per-font as well as per config used globally like here
-//        fontConfig.setGlyphRanges(fontAtlas.getGlyphRangesCyrillic());
-//
-//        // Add a default font, which is 'ProggyClean.ttf, 13px'
-//        fontAtlas.addFontDefault();
-//
-//        // Fonts merge example
-//        fontConfig.setMergeMode(true); // When enabled, all fonts added with this config would be merged with the previously added font
-//        fontConfig.setPixelSnapH(true);
-//
-//        fontAtlas.addFontFromMemoryTTF(loadFromResources("basis33.ttf"), 16, fontConfig);
-//
-//        fontConfig.setMergeMode(false);
-//        fontConfig.setPixelSnapH(false);
-//
-//        // Fonts from file/memory example
-//        // We can add new fonts from the file system
-//        fontAtlas.addFontFromFileTTF("src/test/resources/Righteous-Regular.ttf", 14, fontConfig);
-//        fontAtlas.addFontFromFileTTF("src/test/resources/Righteous-Regular.ttf", 16, fontConfig);
-//
-//        // Or directly from the memory
-//        fontConfig.setName("Roboto-Regular.ttf, 14px"); // This name will be displayed in Style Editor
-//        fontAtlas.addFontFromMemoryTTF(loadFromResources("Roboto-Regular.ttf"), 14, fontConfig);
-//        fontConfig.setName("Roboto-Regular.ttf, 16px"); // We can apply a new config value every time we add a new font
-//        fontAtlas.addFontFromMemoryTTF(loadFromResources("Roboto-Regular.ttf"), 16, fontConfig);
-//
-//        fontConfig.destroy(); // After all fonts were added we don't need this config more
-//
-//        // ------------------------------------------------------------
-//        // Use freetype instead of stb_truetype to build a fonts texture
-//        ImGuiFreeType.buildFontAtlas(fontAtlas, ImGuiFreeType.RasterizerFlags.LightHinting);
+        final ImFontAtlas fontAtlas = io.getFonts();
+        final ImFontConfig fontConfig = new ImFontConfig(); // Natively allocated object, should be explicitly destroyed
+        fontAtlas.addFontFromFileTTF("Futura Heavy font.ttf", 16, fontConfig);
+        fontAtlas.addFontDefault(); // Add a default font, which is 'ProggyClean.ttf, 13px'
+        fontConfig.destroy(); // After all fonts were added we don't need this config anymore
 
         // set style
         ImGuiStyle style = ImGui.getStyle();
-        style.setWindowRounding(0);
-        style.setScrollbarRounding(0);
-        style.setFrameBorderSize(1);
-        ImGui.styleColorsClassic();
+        style.setFrameBorderSize(0);
+        style.setWindowBorderSize(0);
+        style.setFrameRounding(16);
+        style.setFramePadding(12, 5);
+        style.setPopupRounding(8);
+        style.setGrabRounding(3);
+        style.setScrollbarRounding(3);
+        style.setWindowRounding(8);
+        style.setWindowMenuButtonPosition(ImGuiDir.Right);
+        style.setWindowTitleAlign(0.5f, 0.5f);
+        ImGui.styleColorsDark(style);
+        style.setColor(ImGuiCol.Button, 62,99,221, 255);
+        style.setColor(ImGuiCol.ButtonHovered, 92, 115, 231, 255);
+        style.setColor(ImGuiCol.ButtonActive, 168, 177, 255, 255);
+        style.setColor(ImGuiCol.WindowBg, 32, 33, 39, 255);
+        style.setColor(ImGuiCol.TitleBg, 32, 33, 39, 255);
+        style.setColor(ImGuiCol.TitleBgActive, 32, 33, 39, 255);
+        style.setColor(ImGuiCol.TitleBgCollapsed, 32, 33, 39, 255);
+        style.setColor(ImGuiCol.FrameBg, 50,54,63, 255);
+        style.setColor(ImGuiCol.FrameBgHovered, 65,72,83, 255);
+        style.setColor(ImGuiCol.FrameBgActive, 81,92,103, 255);
+        style.setColor(ImGuiCol.SliderGrab, 62,99,221, 255);
+        style.setColor(ImGuiCol.SliderGrabActive, 168, 177, 255, 255);
+        style.setColor(ImGuiCol.CheckMark, 62,99,221, 255);
+        style.setColor(ImGuiCol.HeaderHovered, 62,99,221, 255);
+        style.setColor(ImGuiCol.HeaderActive, 92, 115, 231, 255);
+        style.setColor(ImGuiCol.Separator, 255, 255, 255, 18);
     }
 
     /**

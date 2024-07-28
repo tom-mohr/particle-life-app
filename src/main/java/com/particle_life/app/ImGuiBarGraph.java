@@ -28,8 +28,11 @@ class ImGuiBarGraph {
 
         ImDrawList drawList = ImGui.getWindowDrawList();
 
-        ImVec2 cursor = new ImVec2();
-        ImGui.getCursorScreenPos(cursor);
+        ImVec2 cursorAbsolute = new ImVec2();
+        ImGui.getCursorScreenPos(cursorAbsolute);
+
+        ImVec2 cursorRelative = new ImVec2();
+        ImGui.getCursorPos(cursorRelative);
 
         int nTypes = typeCount.length;
         float barHeight = h / nTypes;
@@ -43,8 +46,8 @@ class ImGuiBarGraph {
         boolean renderText = maxCountTextSize.y < barHeight;
 
         for (int type = 0; type < nTypes; type++) {
-            float x = cursor.x;
-            float y = cursor.y + type * barHeight;
+            float absX = cursorAbsolute.x;
+            float absY = cursorAbsolute.y + type * barHeight;
 
             int count = typeCount[type];
             float fractionOfMax = maxCount != 0 ? count / (float) maxCount : 0;
@@ -57,16 +60,20 @@ class ImGuiBarGraph {
             } else {
                 barWidth = w * fractionOfMax;
             }
-            drawList.addRectFilled(x, y, x + barWidth, y + barHeight, ImGui.colorConvertFloat4ToU32(color.r, color.g, color.b, color.a));
+            drawList.addRectFilled(absX, absY, absX + barWidth, absY + barHeight,
+                    ImGui.colorConvertFloat4ToU32(color.r, color.g, color.b, color.a), barHeight / 2);
 
             if (renderText) {
-                ImGui.setCursorPos(x + barWidth + spaceBeforeText, y + (barHeight - maxCountTextSize.y) / 2);
+                float relX = cursorRelative.x;
+                float relY = cursorRelative.y + type * barHeight;
+                ImGui.setCursorPos(relX + barWidth + spaceBeforeText, relY + (barHeight - maxCountTextSize.y) / 2);
                 ImGui.text(formatText(count, total, percentage));
-                ImGui.setCursorPos(cursor.x, cursor.y);
+                ImGui.setCursorPos(cursorRelative.x, cursorRelative.y);
             }
 
-            if (ImGui.isMouseHoveringRect(x, y, x + w, y + barHeight)) {
-                drawList.addRect(x, y, x + w, y + barHeight, ImGui.colorConvertFloat4ToU32(1, 1, 1, 1));
+            if (ImGui.isMouseHoveringRect(absX, absY, absX + w, absY + barHeight)) {
+                drawList.addRect(absX, absY, absX + w, absY + barHeight,
+                        ImGui.colorConvertFloat4ToU32(1, 1, 1, 1), barHeight / 2);
                 ImGui.setTooltip("" + count);
 
                 hovering = true;
@@ -94,9 +101,8 @@ class ImGuiBarGraph {
 
         ImGui.dummy(w, h);
 
-        ImGui.sameLine();
         ImGuiUtils.helpMarker(String.format(
-                "Click with different mouse buttons to change values: Left +%d. Right -%d. Middle 0.", stepSize, stepSize
+                "Click with different mouse buttons to change values:\nLeft +%d.\nRight -%d.\nMiddle 0.", stepSize, stepSize
         ));
 
         return hovering ? typeHovering : -1;
