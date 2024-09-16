@@ -14,9 +14,9 @@ public class CursorShader {
 
     public CursorShader() throws IOException {
         shaderProgram = ShaderUtil.makeShaderProgram(
-                "cursor_shaders/cursor.vert",
+                ".internal/cursor_shaders/cursor.vert",
                 null,
-                "cursor_shaders/cursor.frag"
+                ".internal/cursor_shaders/cursor.frag"
         );
         transformUniformLocation = glGetUniformLocation(shaderProgram, "transform");
     }

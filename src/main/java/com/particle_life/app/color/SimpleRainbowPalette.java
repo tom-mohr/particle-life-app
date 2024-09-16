@@ -1,6 +1,6 @@
 package com.particle_life.app.color;
 
-class FallbackPalette implements Palette {
+public class SimpleRainbowPalette implements Palette {
     @Override
     public Color getColor(int type, int nTypes) {
         double x = 2 * Math.PI * ((double) type / (double) nTypes);

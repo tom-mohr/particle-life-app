@@ -1,10 +1,6 @@
 package com.particle_life.app;
 
-import com.particle_life.app.cursors.Cursor;
 import com.particle_life.app.shaders.ParticleShader;
-import imgui.ImDrawData;
-import imgui.gl3.ImGuiImplGl3;
-import org.joml.Matrix4d;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL15.*;
@@ -12,7 +8,7 @@ import static org.lwjgl.opengl.GL20.glEnableVertexAttribArray;
 import static org.lwjgl.opengl.GL20.glVertexAttribPointer;
 import static org.lwjgl.opengl.GL30.*;
 
-class Renderer {
+class ParticleRenderer {
 
     private int vao;
     private int vboX;
@@ -20,7 +16,6 @@ class Renderer {
     private int vboT;
 
     public ParticleShader particleShader = null;
-    private final ImGuiImplGl3 imGuiGl3 = new ImGuiImplGl3();
     /**
      * Remember the last buffered size in order to use subBufferData instead of bufferData whenever possible.
      */
@@ -28,11 +23,6 @@ class Renderer {
     private int lastShaderProgram = -1;
 
     void init() {
-        // Method initializes LWJGL3 renderer.
-        // This method SHOULD be called after you've initialized your ImGui configuration (fonts and so on).
-        // ImGui context should be created as well.
-        imGuiGl3.init("#version 410 core");
-
         vao = glGenVertexArrays();
         vboX = glGenBuffers();
         vboV = glGenBuffers();
@@ -103,29 +93,39 @@ class Renderer {
         }
     }
 
-    void clear() {
-        // The OpenGL Specification states that glClear() only clears the scissor rectangle when the scissor test is enabled.
+    void renderParticles(int viewportWidth, int viewportHeight) {
+        if (particleShader == null || lastBufferedSize <= 0) return;
+
         glDisable(GL_SCISSOR_TEST);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear the framebuffer
+        glViewport(0, 0, viewportWidth, viewportHeight);
+        particleShader.use();
+        glBindVertexArray(vao);
+        glDrawArrays(GL_POINTS, 0, lastBufferedSize);
     }
 
-    void run(Matrix4d transform, boolean drawCursor, Cursor cursor, ImDrawData imDrawData, int width, int height) {
+    int[] renderParticlesToImage(int width, int height) {
+        int[] pixels = new int[width * height];
 
-        // draw particles
-        if (particleShader != null && lastBufferedSize > 0) {
-            glDisable(GL_SCISSOR_TEST);
-            glViewport(0, 0, width, height);
-            particleShader.use();
-            glBindVertexArray(vao);
-            glDrawArrays(GL_POINTS, 0, lastBufferedSize);
+        // create, bind
+        int framebuffer = glGenFramebuffers();
+        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+
+        int texture = glGenTextures();
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+            throw new RuntimeException("Framebuffer is not complete");
         }
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear the framebuffer
+        renderParticles(width, height);
+        glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
-        if (drawCursor) cursor.draw(transform);
+        // unbind, delete
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDeleteFramebuffers(framebuffer);
 
-        imGuiGl3.render(imDrawData);  // will change shader and vao
-    }
-
-    void dispose() {
-        imGuiGl3.dispose();
+        return pixels;
     }
 }

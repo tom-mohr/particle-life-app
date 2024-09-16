@@ -19,7 +19,7 @@ public class PalettesProvider implements InfoWrapperProvider<Palette> {
     public List<InfoWrapper<Palette>> create() throws Exception {
         List<InfoWrapper<Palette>> palettes = new ArrayList<>();
 
-        palettes.add(new InfoWrapper<>("Digital Rainbow", new FallbackPalette()));
+        palettes.add(new InfoWrapper<>("Digital Rainbow", new SimpleRainbowPalette()));
 
         try {
             palettes.addAll(loadPalettesFromFiles());

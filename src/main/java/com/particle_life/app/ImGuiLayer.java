@@ -181,7 +181,7 @@ public class ImGuiLayer {
 
         final ImFontAtlas fontAtlas = io.getFonts();
         final ImFontConfig fontConfig = new ImFontConfig(); // Natively allocated object, should be explicitly destroyed
-        fontAtlas.addFontFromFileTTF("Futura Heavy font.ttf", 16, fontConfig);
+        fontAtlas.addFontFromFileTTF(".internal/Futura Heavy font.ttf", 16, fontConfig);
         fontAtlas.addFontDefault(); // Add a default font, which is 'ProggyClean.ttf, 13px'
         fontConfig.destroy(); // After all fonts were added we don't need this config anymore
 

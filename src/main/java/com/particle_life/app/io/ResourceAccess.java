@@ -11,13 +11,6 @@ import java.util.stream.Collectors;
 
 public class ResourceAccess {
 
-    /**
-     * @param path must not start with "/" or "./", e.g. "textures/image.png", "settings.properties", ...
-     */
-    public static InputStream getInputStream(String path) {
-        return ClassLoader.getSystemClassLoader().getResourceAsStream(path);
-    }
-
     public static boolean fileExists(String path) {
         return new File(path).exists();
     }
@@ -28,9 +21,7 @@ public class ResourceAccess {
         // ensure containing directories exist
         File dir = file.getParentFile();
         if (dir != null && !dir.exists()) {
-            if (!dir.mkdirs()) {
-                throw new IOException("Failed to create directories: " + dir.getAbsolutePath());
-            }
+            dir.mkdirs();
         }
 
         // create file
@@ -51,9 +42,19 @@ public class ResourceAccess {
      *                  Examples for allowed paths: "textures", "assets/music", ...
      */
     public static List<Path> listFiles(String directory) throws IOException {
-        Path path = new File(directory).toPath();
-        return Files.walk(path, 1)
+        File file = new File(directory);
+
+        // return empty list if directory doesn't exist
+        if (!file.exists()) return List.of();
+
+        return Files.walk(file.toPath(), 1)
                 .skip(1)  // first entry is just the directory
                 .collect(Collectors.toList());
+    }
+
+    public static String getFileNameWithoutExtension(File file) {
+        String fileName = file.getName();
+        int dotIndex = fileName.lastIndexOf('.');
+        return dotIndex == -1 ? fileName : fileName.substring(0, dotIndex);
     }
 }

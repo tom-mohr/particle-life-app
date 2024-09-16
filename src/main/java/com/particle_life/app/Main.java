@@ -2,29 +2,49 @@ package com.particle_life.app;
 
 import com.particle_life.*;
 import com.particle_life.app.color.Color;
+import com.particle_life.app.color.SimpleRainbowPalette;
 import com.particle_life.app.color.Palette;
 import com.particle_life.app.color.PalettesProvider;
 import com.particle_life.app.cursors.*;
+import com.particle_life.app.io.MatrixIO;
+import com.particle_life.app.io.ParticlesIO;
+import com.particle_life.app.io.ResourceAccess;
 import com.particle_life.app.selection.SelectionManager;
 import com.particle_life.app.shaders.ParticleShader;
 import com.particle_life.app.shaders.ShaderProvider;
 import com.particle_life.app.utils.ImGuiUtils;
 import com.particle_life.app.utils.MathUtils;
 import imgui.ImGui;
+import imgui.ImGuiStyle;
 import imgui.flag.*;
+import imgui.gl3.ImGuiImplGl3;
 import imgui.type.ImBoolean;
 import imgui.type.ImFloat;
 import imgui.type.ImInt;
+import imgui.type.ImString;
 import org.joml.Matrix4d;
 import org.joml.Vector2d;
 import org.joml.Vector3d;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
-import static org.lwjgl.opengl.GL11.glEnable;
+import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT;
 import static org.lwjgl.opengl.GL13.GL_MULTISAMPLE;
 
 public class Main extends App {
@@ -33,10 +53,10 @@ public class Main extends App {
         Main main = new Main();
         try {
             main.appSettings.load(SETTINGS_FILE_NAME);
-        } catch (IOException | IllegalAccessException e) {
+        } catch (IOException e) {
             main.error = new AppSettingsLoadException("Failed to load settings", e);
         }
-        main.launch("Particle Life Simulator", main.appSettings.startInFullscreen, "favicon.png");
+        main.launch("Particle Life Simulator", main.appSettings.startInFullscreen, ".internal/favicon.png");
     }
 
     private final AppSettings appSettings = new AppSettings();
@@ -61,7 +81,8 @@ public class Main extends App {
 
     // helper classes
     private final Matrix4d transform = new Matrix4d();
-    private final Renderer renderer = new Renderer();
+    private final ParticleRenderer particleRenderer = new ParticleRenderer();
+    private final ImGuiImplGl3 imGuiGl3 = new ImGuiImplGl3();
 
     private ExtendedPhysics physics;
     private Loop loop;
@@ -110,9 +131,18 @@ public class Main extends App {
     // GUI: hide / show parts
     private final ImBoolean showGui = new ImBoolean(true);
     private final ImBoolean showGraphicsWindow = new ImBoolean(false);
-    private final ImBoolean showStyleEditor = new ImBoolean(false);
     private final ImBoolean showControlsWindow = new ImBoolean(false);
     private final ImBoolean showAboutWindow = new ImBoolean(false);
+    private final ImBoolean showSavesPopup = new ImBoolean(false);
+
+    // GUI: widget state variables
+    private final ImString saveName = new ImString();
+    private ImGuiCardView.Card[] saveCards = new ImGuiCardView.Card[0];
+    private final AtomicBoolean requestedSaveCardsLoading = new AtomicBoolean(true);
+    private int[] saveImage = null;
+    private static final int SAVE_IMAGE_SIZE = 256;
+    private boolean requestedSaveImage = false;
+    private File selectedSaveFile = null;
 
     // GUI: store data on the current state of the GUI
     private boolean tracesBefore = traces;// if "traces" was enabled in last frame
@@ -120,7 +150,13 @@ public class Main extends App {
     @Override
     protected void setup() {
         glEnable(GL_MULTISAMPLE);
-        renderer.init();
+
+        // Method initializes LWJGL3 renderer.
+        // This method SHOULD be called after you've initialized your ImGui configuration (fonts and so on).
+        // ImGui context should be created as well.
+        imGuiGl3.init("#version 410 core");
+
+        particleRenderer.init();
 
         // cursor object must be created after renderer.init()
         try {
@@ -211,7 +247,7 @@ public class Main extends App {
 
             try {
                 appSettings.save(SETTINGS_FILE_NAME);
-            } catch (IOException | IllegalAccessException e) {
+            } catch (IOException e) {
                 e.printStackTrace();
             }
         }
@@ -223,7 +259,7 @@ public class Main extends App {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        renderer.dispose();
+        imGuiGl3.dispose();
     }
 
     @Override
@@ -235,17 +271,40 @@ public class Main extends App {
             // Any Dear ImGui code must go between ImGui.newFrame() and ImGui.render()
             if (!traces && showGui.get()) buildGui();
             ImGui.render();
-            setShaderVariables();
-            if (!traces || !tracesBefore) renderer.clear();
+
+            // set shader variables
+            particleRenderer.particleShader.use();
+            particleRenderer.particleShader.setTime(System.nanoTime() / 1000_000_000.0f);
+            particleRenderer.particleShader.setPalette(getColorsFromPalette(settings.matrix.size(), palettes.getActive()));
+            setTransform(transform, width, height, shift, zoom);
+            particleRenderer.particleShader.setTransform(transform);
+            particleRenderer.particleShader.setSize(appSettings.particleSize
+                    / Math.min(width, height)
+                    / (appSettings.keepParticleSizeIndependentOfZoom ? (float) zoom : 1));
+            particleRenderer.particleShader.setDetail(
+                    MathUtils.constrain(getDetailFromZoom(), ParticleShader.MIN_DETAIL, ParticleShader.MAX_DETAIL));
+
+            if (!traces || !tracesBefore) clearScreen();
             tracesBefore = traces;
-            renderer.run(transform, appSettings.showCursor, cursor, ImGui.getDrawData(), width, height);  // draw particles and GUI
+            particleRenderer.renderParticles(width, height); // particles
+            if (appSettings.showCursor) cursor.draw(transform); // cursor
+            imGuiGl3.render(ImGui.getDrawData());  // gui
         } else {
             ImGui.newFrame();
             buildErrorGui();
             ImGui.render();
-            renderer.clear();
-            renderer.run(transform, appSettings.showCursor, cursor, ImGui.getDrawData(), width, height);  // draw GUI
+            clearScreen();
+            imGuiGl3.render(ImGui.getDrawData());  // gui
         }
+    }
+
+    /**
+     * Clears the default frame buffer.
+     */
+    private void clearScreen() {
+        // The OpenGL Specification states that glClear() only clears the scissor rectangle when the scissor test is enabled.
+        glDisable(GL_SCISSOR_TEST);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear the framebuffer
     }
 
     /**
@@ -368,13 +427,13 @@ public class Main extends App {
             }
         }
 
-        renderer.particleShader = shaders.getActive();  // need to assign a shader before buffering particle data
+        particleRenderer.particleShader = shaders.getActive();  // need to assign a shader before buffering particle data
 
         if (newSnapshotAvailable.get()) {
 
             // get local copy of snapshot
 
-            renderer.bufferParticleData(physicsSnapshot.positions, physicsSnapshot.velocities, physicsSnapshot.types);
+            particleRenderer.bufferParticleData(physicsSnapshot.positions, physicsSnapshot.velocities, physicsSnapshot.types);
             settings = physicsSnapshot.settings.deepCopy();
             particleCount = physicsSnapshot.particleCount;
             preferredNumberOfThreads = physics.preferredNumberOfThreads;
@@ -444,6 +503,7 @@ public class Main extends App {
             // PARTICLES
             ImGui.setNextWindowSize(-1, -1, ImGuiCond.FirstUseEver);
             ImGui.setNextWindowPos(width, 0, ImGuiCond.Always, 1.0f, 0.0f);
+            ImGui.getStyle().setWindowMenuButtonPosition(ImGuiDir.Right);
             if (ImGui.begin("Particles",
                     ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoNavFocus | ImGuiWindowFlags.NoMove)) {
                 ImGui.pushItemWidth(200);
@@ -569,6 +629,7 @@ public class Main extends App {
             // PHYSICS
             ImGui.setNextWindowSize(-1, -1, ImGuiCond.FirstUseEver);
             ImGui.setNextWindowPos(width, height, ImGuiCond.Always, 1.0f, 1.0f);
+            ImGui.getStyle().setWindowMenuButtonPosition(ImGuiDir.Right);
             if (ImGui.begin("Physics",
                     ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoNavFocus | ImGuiWindowFlags.NoMove)) {
                 ImGui.pushItemWidth(200);
@@ -576,7 +637,8 @@ public class Main extends App {
                 if (ImGui.button(loop.pause ? "Play" : "Pause", 80, 0)) {
                     loop.pause ^= true;
                 }
-                ImGuiUtils.helpMarker("[SPACE]");
+                ImGuiUtils.helpMarker("[SPACE] " +
+                        "The physics simulation runs independently from the graphics in the background.");
 
                 ImGui.sameLine();
                 if (loop.getAvgFramerate() < 100000) {
@@ -604,12 +666,14 @@ public class Main extends App {
                         value -> loop.enqueue(() -> physics.settings.rmax = value));
                 ImGuiUtils.helpMarker("The distance at which particles interact.");
 
-                ImGuiUtils.numberInput("Velocity Half Life",
+                ImGuiUtils.numberInput("Friction Coefficient",
                         0f, 1f,
-                        (float) settings.velocityHalfLife,
+                        (float) settings.friction,
                         "%.3f",
-                        value -> loop.enqueue(() -> physics.settings.velocityHalfLife = value));
-                ImGuiUtils.helpMarker("The time after which half the velocity of a particle should be lost due to friction.");
+                        value -> loop.enqueue(() -> physics.settings.friction = value),
+                        false);
+                ImGuiUtils.helpMarker("The velocity of all particles is multiplied with this value" +
+                        " in each update step to simulate friction (assuming 60 fps).");
 
                 ImGuiUtils.numberInput("Force Scaling",
                         0f, 100f,
@@ -654,6 +718,7 @@ public class Main extends App {
             // CURSOR
             ImGui.setNextWindowSize(290, 250, ImGuiCond.FirstUseEver);
             ImGui.setNextWindowPos(0, height, ImGuiCond.Always, 0.0f, 1.0f);
+            ImGui.getStyle().setWindowMenuButtonPosition(ImGuiDir.Left);
             if (ImGui.begin("Cursor",
                     ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoNavFocus | ImGuiWindowFlags.NoMove)) {
                 ImGui.pushItemWidth(200);
@@ -778,7 +843,6 @@ public class Main extends App {
                 }
                 ImGui.end();
             }
-
         }
 
         // PHYSICS NOT REACTING
@@ -827,10 +891,6 @@ public class Main extends App {
             ImGui.endPopup();
         }
 
-        if (showStyleEditor.get()) {
-            ImGui.showStyleEditor();
-        }
-
         if (showControlsWindow.get()) {
             ImGui.setNextWindowPos(width / 2f, height / 2f, ImGuiCond.FirstUseEver, 0.5f, 0.5f);
             if (ImGui.begin("Controls", showControlsWindow, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoResize)) {
@@ -858,7 +918,7 @@ public class Main extends App {
                         [Z]: reset zoom (fit window)
                                                 
                         [c]: toggle traces (clear screen)
-                        [h]: hide GUI / show GUI
+                        [ESCAPE]: hide GUI / show GUI
                         """);
             }
             ImGui.end();
@@ -876,10 +936,105 @@ public class Main extends App {
             }
             ImGui.end();
         }
+
+        if (showSavesPopup.get()) ImGui.openPopup("Saves");
+        ImGui.setNextWindowSize(480, -1, ImGuiCond.Always);
+        ImGui.setNextWindowPos(width / 2f, height / 2f, ImGuiCond.Appearing, 0.5f, 0.5f);
+        ImGui.setNextWindowBgAlpha(1f);
+        if (ImGui.beginPopupModal("Saves", showSavesPopup, ImGuiWindowFlags.NoResize)) {
+
+            ImGui.textDisabled("""
+                    Left-click to load, middle-click to delete.
+                    The most recent saves are at the top.
+                    Each save corresponds to a .zip file in the 'saves' directory.
+                    """
+            );
+            ImGuiUtils.separator();
+
+            float cardViewWidth = ImGui.getWindowContentRegionMaxX() - 2 * ImGui.getStyle().getFramePaddingX();
+            ImGui.beginChild("save cards", cardViewWidth, 250);
+            ImGuiCardView.Card[] filteredCards = Arrays
+                    .stream(saveCards)
+                    .filter(card -> card.name.contains(saveName.get()))
+                    .sorted(Comparator.comparing(card -> -card.file.lastModified()))  // sort by creation time (descending)
+                    .toArray(ImGuiCardView.Card[]::new);
+            ImGuiCardView.draw(
+                    cardViewWidth,
+                    100,
+                    8,
+                    filteredCards,
+                    card -> {
+                        loop.enqueue(() -> loadState(card.file));
+                        showSavesPopup.set(false);
+                    },
+                    card -> {
+                        try {
+                            Files.deleteIfExists(card.file.toPath());
+                        } catch (IOException e) {
+                            this.error = e;
+                        }
+                        requestedSaveCardsLoading.set(true);
+                    }
+            );
+            ImGui.endChild();
+
+            if (!ImGui.isAnyItemActive() && !ImGui.isMouseClicked(0)) {
+                // see https://github.com/ocornut/imgui/issues/455#issuecomment-167440172
+                ImGui.setKeyboardFocusHere(0);
+            }
+            boolean shouldSave = ImGui.inputTextWithHint("##save name", "Save Name", saveName, ImGuiInputTextFlags.EnterReturnsTrue);
+            ImGuiUtils.helpMarker("Enter a name and press Enter to save the current state.");
+            if (shouldSave) {
+                String title = saveName.get();
+                saveName.clear();
+                if (!title.isBlank()) {
+                    selectedSaveFile = new File("saves/" + title + ".zip");
+                    requestedSaveImage = true;
+                }
+            }
+            ImGui.endPopup();
+        }
+
+        if (requestedSaveImage) {
+
+            // set shader variables
+            String defaultShaderName = "default";
+            if (shaders.hasName(defaultShaderName)) {
+                particleRenderer.particleShader = shaders.get(shaders.getIndexByName(defaultShaderName)).object;
+            }
+            particleRenderer.particleShader.use();
+            particleRenderer.particleShader.setTime(0);
+            particleRenderer.particleShader.setPalette(getColorsFromPalette(
+                    settings.matrix.size(),
+                    new SimpleRainbowPalette()));
+            Matrix4d transform = new Matrix4d();
+            setTransform(transform, SAVE_IMAGE_SIZE, SAVE_IMAGE_SIZE, new Vector3d(0), 1.0);
+            particleRenderer.particleShader.setTransform(transform);
+            particleRenderer.particleShader.setSize(4f / SAVE_IMAGE_SIZE);
+            particleRenderer.particleShader.setDetail(ParticleShader.MIN_DETAIL);
+
+            saveImage = particleRenderer.renderParticlesToImage(SAVE_IMAGE_SIZE, SAVE_IMAGE_SIZE);
+            requestedSaveImage = false;
+
+            final File selectedFile = selectedSaveFile;
+            loop.enqueue(() -> {
+                selectedFile.getParentFile().mkdirs();
+                saveState(selectedFile);
+            });
+        }
+
+        if (requestedSaveCardsLoading.getAndSet(false)) {
+            loadSaveCards();
+        }
     }
 
     private void buildMainMenu() {
-        if (ImGui.beginMenu("App")) {
+        if (ImGui.beginMenu("Menu")) {
+
+            if (ImGui.menuItem("Saves##menu", "Ctrl+s")) {
+                showSavesPopup.set(true);
+                requestedSaveCardsLoading.set(true);
+            }
 
             if (ImGui.menuItem("Controls..")) {
                 showControlsWindow.set(true);
@@ -908,7 +1063,7 @@ public class Main extends App {
                 }
             }
 
-            if (ImGui.menuItem("Hide GUI", "h")) {
+            if (ImGui.menuItem("Hide GUI", "Esc")) {
                 showGui.set(false);
             }
 
@@ -924,13 +1079,114 @@ public class Main extends App {
                 ImGui.endMenu();
             }
 
-            ImGui.menuItem("Style Editor..", "", showStyleEditor);
-
             if (ImGui.menuItem("Graphics..")) {
                 showGraphicsWindow.set(true);
             }
 
             ImGui.endMenu();
+        }
+    }
+
+    private void loadSaveCards() {
+        List<Path> saves;
+        try {
+            saves = ResourceAccess.listFiles("saves");
+        } catch (IOException e) {
+            this.error = e;
+            return;
+        }
+        saveCards = ImGuiCardView.loadCards(saves);
+    }
+
+    private void saveState(File file) {
+        try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
+            try (ZipOutputStream zip = new ZipOutputStream(fileOutputStream)) {
+
+                // PARTICLES
+                zip.putNextEntry(new ZipEntry("particles.tsv"));
+                ParticlesIO.saveParticles(physics.particles, zip);
+                zip.closeEntry();
+
+                // PHYSICS SETTINGS
+                zip.putNextEntry(new ZipEntry("physics.toml"));
+                PhysicsSettingsToml.fromPhysicsSettings(physics.settings).save(zip);
+                zip.closeEntry();
+
+                // MATRIX
+                zip.putNextEntry(new ZipEntry("matrix.tsv"));
+                MatrixIO.saveMatrix(physics.settings.matrix, zip);
+                zip.closeEntry();
+
+                // IMAGE
+                if (saveImage != null) {
+                    zip.putNextEntry(new ZipEntry("img.png"));
+                    // convert to png format
+                    BufferedImage bufferedImage = new BufferedImage(
+                            SAVE_IMAGE_SIZE, SAVE_IMAGE_SIZE,
+                            BufferedImage.TYPE_INT_ARGB
+                    );
+                    bufferedImage.setRGB(
+                            0, 0, SAVE_IMAGE_SIZE, SAVE_IMAGE_SIZE,
+                            saveImage, 0, SAVE_IMAGE_SIZE
+                    );
+                    ImageIO.write(bufferedImage, "png", zip);
+                    zip.closeEntry();
+                    saveImage = null;
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        requestedSaveCardsLoading.set(true);
+    }
+
+    /**
+     * Load the state from a ZIP file.
+     * The zip file can contain the following files:
+     * <ul>
+     *     <li>particles.tsv</li>
+     *     <li>physics.toml</li>
+     *     <li>matrix.tsv</li>
+     * </ul>
+     * If a file is missing, the existing state will be kept for that part.
+     * Currently, this might lead to an error, e.g. if the matrix size
+     * doesn't match the particle types.
+     *
+     * @param file a zip file
+     */
+    private void loadState(File file) {
+        try (ZipInputStream zip = new ZipInputStream(new FileInputStream(file))) {
+            ZipEntry entry;
+            while ((entry = zip.getNextEntry()) != null) {
+                switch (entry.getName()) {
+                    case "particles.tsv": {
+                        physics.particles = ParticlesIO.loadParticles(zip);
+                        break;
+                    }
+                    case "physics.toml": {
+                        PhysicsSettingsToml toml = new PhysicsSettingsToml();
+                        toml.load(zip);
+                        toml.toPhysicsSettings(physics.settings);  // copy values
+                        break;
+                    }
+                    case "matrix.tsv": {
+                        physics.settings.matrix = MatrixIO.loadMatrix(zip);
+                        physics.ensureTypes();  // in case the matrix size changed
+                        break;
+                    }
+                    case "img.png": {
+                        // ignore
+                        break;
+                    }
+                    default: {
+                        System.err.println("Unknown file in ZIP: " + entry.getName());
+                        break;
+                    }
+                }
+                zip.closeEntry();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -940,27 +1196,18 @@ public class Main extends App {
         if (!smooth) shift.set(0);
     }
 
-    private void setShaderVariables() {
-
-        transform.identity();
-        new Coordinates(width, height, shift, zoom).apply(transform);
-
-        // calculate palette
-        int nTypes = settings.matrix.size();//todo: use value from buffer?
-        Color[] colors = new Color[nTypes];
-        Palette palette = palettes.getActive();
-        for (int i = 0; i < nTypes; i++) {
-            colors[i] = palette.getColor(i, nTypes);
+    private Color[] getColorsFromPalette(int n, Palette palette) {
+        Color[] colors = new Color[n];
+        for (int i = 0; i < n; i++) {
+            colors[i] = palette.getColor(i, n);
         }
+        return colors;
+    }
 
-        ParticleShader particleShader = renderer.particleShader;
-
-        particleShader.use();
-        particleShader.setTime(System.nanoTime() / 1000_000_000.0f);
-        particleShader.setPalette(colors);
-        particleShader.setTransform(transform);
-        particleShader.setSize(appSettings.particleSize / Math.min(width, height) / (appSettings.keepParticleSizeIndependentOfZoom ? (float) zoom : 1));
-        particleShader.setDetail(MathUtils.constrain(getDetailFromZoom(), ParticleShader.MIN_DETAIL, ParticleShader.MAX_DETAIL));
+    private void setTransform(Matrix4d targetMatrix,
+                              float width, float height, Vector3d shift, double zoom) {
+        targetMatrix.identity();
+        new Coordinates(width, height, shift, zoom).apply(targetMatrix);
     }
 
     private int getDetailFromZoom() {
@@ -979,6 +1226,7 @@ public class Main extends App {
 
     @Override
     protected void onKeyPressed(String keyName) {
+        // update key states
         switch (keyName) {
             case "LEFT" -> leftPressed = true;
             case "RIGHT" -> rightPressed = true;
@@ -988,8 +1236,27 @@ public class Main extends App {
             case "RIGHT_SHIFT" -> rightShiftPressed = true;
             case "LEFT_CONTROL" -> leftControlPressed = true;
             case "RIGHT_CONTROL" -> rightControlPressed = true;
-            case "c" -> traces ^= true;
-            case "h" -> {
+        }
+
+        // ctrl + key shortcuts
+        if (leftControlPressed | rightControlPressed) {
+            switch (keyName) {
+                case "s" -> {
+                    showSavesPopup.set(true);
+                    requestedSaveCardsLoading.set(true);
+
+                    // Clear mods manually, because releasing the control key
+                    // won't be captured once the popup is open.
+                    leftControlPressed = false;
+                    rightControlPressed = false;
+                }
+            }
+            return;
+        }
+
+        // simple key shortcuts
+        switch (keyName) {
+            case "ESCAPE" -> {
                 if (traces) {
                     traces = false;
                     showGui.set(true);
@@ -997,6 +1264,7 @@ public class Main extends App {
                     showGui.set(!showGui.get());
                 }
             }
+            case "c" -> traces ^= true;
             case "l" -> palettes.stepForward();
             case "L" -> palettes.stepBackward();
             case "s" -> shaders.stepForward();
@@ -1054,6 +1322,7 @@ public class Main extends App {
 
     @Override
     protected void onKeyReleased(String keyName) {
+        // update key states
         switch (keyName) {
             case "LEFT" -> leftPressed = false;
             case "RIGHT" -> rightPressed = false;

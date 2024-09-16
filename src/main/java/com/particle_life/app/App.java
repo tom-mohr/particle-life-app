@@ -216,6 +216,7 @@ public abstract class App {
                         case GLFW_KEY_RIGHT_SHIFT -> "RIGHT_SHIFT";
                         case GLFW_KEY_LEFT_CONTROL -> "LEFT_CONTROL";
                         case GLFW_KEY_RIGHT_CONTROL -> "RIGHT_CONTROL";
+                        case GLFW_KEY_ESCAPE ->  "ESCAPE";
                         default -> null;
                     };
                 }

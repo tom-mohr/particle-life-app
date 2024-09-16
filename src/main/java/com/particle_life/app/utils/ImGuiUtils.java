@@ -89,9 +89,19 @@ public final class ImGuiUtils {
                                    float value,
                                    String format,
                                    NumberInputCallback callback) {
+        numberInput(label, min, max, value, format, callback, true);
+    }
+
+    public static void numberInput(String label,
+                                   float min, float max,
+                                   float value,
+                                   String format,
+                                   NumberInputCallback callback,
+                                   boolean logarithmicScale) {
         float[] valueBuffer = new float[]{value};
-        if (ImGui.sliderFloat(label, valueBuffer, min, max, format,
-                ImGuiSliderFlags.Logarithmic | ImGuiSliderFlags.NoRoundToFormat)) {
+        int imGuiSliderFlags = ImGuiSliderFlags.NoRoundToFormat;
+        if (logarithmicScale) imGuiSliderFlags |= ImGuiSliderFlags.Logarithmic;
+        if (ImGui.sliderFloat(label, valueBuffer, min, max, format, imGuiSliderFlags)) {
             callback.onValueChanged(valueBuffer[0]);
         }
     }

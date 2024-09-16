@@ -5,8 +5,7 @@ import com.moandjiezana.toml.TomlWriter;
 import com.particle_life.app.io.ResourceAccess;
 import org.apache.commons.text.similarity.LevenshteinDistance;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -18,8 +17,8 @@ import java.util.stream.Collectors;
  * The fields of the subclass are annotated with {@link TomlKey} to specify the key in the TOML file.
  * The subclass can then load and save the settings to a file.
  * <p>
- *     Example:
- *     <pre>{@code
+ * Example:
+ * <pre>{@code
  *     public class AppSettings extends TomlFile {
  *         @TomlKey("fullscreen")
  *         public boolean fullScreen = true;
@@ -47,53 +46,62 @@ import java.util.stream.Collectors;
  *     will be ignored.
  * </p>
  */
-public class TomlFile {
+public abstract class TomlFile {
     private static final LevenshteinDistance levenshtein = new LevenshteinDistance();
 
-    public void load(String fileName) throws IOException, IllegalAccessException {
+    public void load(String fileName) throws IOException {
         if (!ResourceAccess.fileExists(fileName)) {
             save(fileName);
         } else {
-            // read all properties from the file
-            String fileContent = ResourceAccess.readTextFile(fileName);
+            try (FileInputStream inputStream = new FileInputStream(fileName)) {
+                load(inputStream);
+            }
+        }
+    }
 
-            Toml toml = new Toml().read(fileContent);
-            for (Field f : fields()) {
-                String tomlKey = f.getAnnotation(TomlKey.class).value();
-                try {
-                    if (f.getType() == boolean.class) {
-                        f.setBoolean(this, toml.getBoolean(tomlKey, f.getBoolean(this)));
-                    } else if (f.getType() == double.class) {
-                        f.setDouble(this, toml.getDouble(tomlKey, f.getDouble(this)));
-                    } else if (f.getType() == float.class) {
-                        f.setFloat(this, toml.getDouble(tomlKey, (double) f.getFloat(this)).floatValue());
-                    } else if (f.getType() == int.class) {
-                        f.setInt(this, toml.getLong(tomlKey, (long) f.getInt(this)).intValue());
-                    } else if (f.getType() == String.class) {
-                        f.set(this, toml.getString(tomlKey, (String) f.get(this)));
-                    } else {
-                        String message = "Unsupported field type: " + f.getType();
-                        String candidate;
-                        throw new IOException(message);
-                    }
-                } catch (IllegalAccessException e) {
-                    e.printStackTrace();
+    public void load(InputStream inputStream) throws IOException {
+
+        // This line is a bug fix for a bug in the Toml library.
+        // The Toml library closes the input stream after reading the file,
+        // instead of leaving it open for the caller to close.
+        inputStream = new UnclosableStream(inputStream);
+        Toml toml = new Toml().read(inputStream);
+
+        for (Field f : fields()) {
+            String tomlKey = f.getAnnotation(TomlKey.class).value();
+            try {
+                if (f.getType() == boolean.class) {
+                    f.setBoolean(this, toml.getBoolean(tomlKey, f.getBoolean(this)));
+                } else if (f.getType() == double.class) {
+                    f.setDouble(this, toml.getDouble(tomlKey, f.getDouble(this)));
+                } else if (f.getType() == float.class) {
+                    f.setFloat(this, toml.getDouble(tomlKey, (double) f.getFloat(this)).floatValue());
+                } else if (f.getType() == int.class) {
+                    f.setInt(this, toml.getLong(tomlKey, (long) f.getInt(this)).intValue());
+                } else if (f.getType() == String.class) {
+                    f.set(this, toml.getString(tomlKey, (String) f.get(this)));
+                } else {
+                    String message = "Unsupported field type: " + f.getType();
+                    String candidate;
+                    throw new IOException(message);
                 }
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
             }
-            Set<String> unknownKeys = toml.toMap().keySet();
-            Set<String> allowedKeys = fields().stream()
-                    .map(f -> f.getAnnotation(TomlKey.class).value())
-                    .collect(Collectors.toSet());
-            unknownKeys.removeAll(allowedKeys);
-            if (!unknownKeys.isEmpty()) {
-                String firstWrongKey = (String) unknownKeys.toArray()[0];
-                String message = "Unknown key '" + firstWrongKey + "' in " + fileName + ".";
-                String candidate = guessCandidate(firstWrongKey, allowedKeys, 3);
-                if (candidate != null) {
-                    message += " Did you mean '" + candidate + "'?";
-                }
-                throw new IOException(message);
+        }
+        Set<String> unknownKeys = toml.toMap().keySet();
+        Set<String> allowedKeys = fields().stream()
+                .map(f -> f.getAnnotation(TomlKey.class).value())
+                .collect(Collectors.toSet());
+        unknownKeys.removeAll(allowedKeys);
+        if (!unknownKeys.isEmpty()) {
+            String firstWrongKey = (String) unknownKeys.toArray()[0];
+            String message = "Unknown key '" + firstWrongKey + "' in .toml file (" + getClass().getSimpleName() + ").";
+            String candidate = guessCandidate(firstWrongKey, allowedKeys, 3);
+            if (candidate != null) {
+                message += " Did you mean '" + candidate + "'?";
             }
+            throw new IOException(message);
         }
     }
 
@@ -105,18 +113,26 @@ public class TomlFile {
      * @param fileName the name of the TOML file to save the settings to
      * @throws IOException if the file can't be written
      */
-    public void save(String fileName) throws IOException, IllegalAccessException {
+    public void save(String fileName) throws IOException {
         if (!ResourceAccess.fileExists(fileName)) {
             ResourceAccess.createFile(fileName);
         }
+        save(new FileOutputStream(fileName));
+    }
 
+    public void save(OutputStream outputStream) throws IOException {
         HashMap<String, Object> map = new HashMap<>();
         for (Field f : fields()) {
-            map.put(f.getAnnotation(TomlKey.class).value(), f.get(this));
+            try {
+                map.put(f.getAnnotation(TomlKey.class).value(), f.get(this));
+            } catch (IllegalAccessException e) {
+                // should never happen
+                throw new RuntimeException(e);
+            }
         }
 
         TomlWriter tomlWriter = new TomlWriter();
-        tomlWriter.write(map, new File(fileName));
+        tomlWriter.write(map, outputStream);
     }
 
     private Set<Field> fields() {

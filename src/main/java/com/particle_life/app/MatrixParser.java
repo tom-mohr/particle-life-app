@@ -65,7 +65,7 @@ public final class MatrixParser {
         for (int i = 0; i < matrix.size(); i++) {
             for (int j = 0; j < matrix.size() - 1; j++) {
                 sb.append(doubleEncoder.encode(matrix.get(i, j)));
-                sb.append(" ");
+                sb.append("\t");
             }
             sb.append(doubleEncoder.encode(matrix.get(i, matrix.size() - 1)));
             sb.append("\n");
