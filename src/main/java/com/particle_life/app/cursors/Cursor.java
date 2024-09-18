@@ -27,11 +27,12 @@ public class Cursor {
 
         if (wrap) {
             // wrapping the connection gives us the shortest possible distance
-            // assume periodic boundaries [-1, 1)
+            // assume periodic boundaries [0, 1)
+            // -> wrap connection on [-0.5, 0.5)
             for (int i = 0; i < 3; i++) {
                 double val = delta.get(i);
-                if (val >= 1.0) delta.setComponent(i, val - 2.0);
-                else if (val < -1.0) delta.setComponent(i, val + 2.0);
+                if (val >= 0.5) delta.setComponent(i, val - 1.0);
+                else if (val < -0.5) delta.setComponent(i, val + 1.0);
             }
         }
 

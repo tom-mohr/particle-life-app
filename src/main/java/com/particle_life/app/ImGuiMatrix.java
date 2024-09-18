@@ -110,7 +110,7 @@ class ImGuiMatrix {
             if (ImGui.isMouseClicked(2)) {
                 val = 0;
             }
-            val = MathUtils.constrain(val, -1, 1);
+            val = MathUtils.clamp(val, -1, 1);
             if (val != previousValue) {
                 setCallback.set(iHovering, jHovering, val);
             }

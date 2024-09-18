@@ -2,7 +2,7 @@ package com.particle_life.app.utils;
 
 public final class MathUtils {
 
-    public static int constrain(int value, int min, int max) {
+    public static int clamp(int value, int min, int max) {
         if (value < min) {
             return min;
         } else if (value > max) {
@@ -12,7 +12,7 @@ public final class MathUtils {
         }
     }
 
-    public static double constrain(double value, double min, double max) {
+    public static double clamp(double value, double min, double max) {
         if (value < min) {
             return min;
         } else if (value > max) {

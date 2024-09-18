@@ -18,7 +18,7 @@ public class PhysicsSettingsToml extends TomlFile {
     public static PhysicsSettingsToml fromPhysicsSettings(PhysicsSettings s) {
         PhysicsSettingsToml toml = new PhysicsSettingsToml();
         toml.boundaries = s.wrap ? "periodic" : "clamped";
-        toml.rmax = s.rmax / 2;  // because Physics uses [-1, 1) coordinates internally, but this app uses [0, 1).
+        toml.rmax = s.rmax;
         toml.friction = s.friction;
         toml.force = s.force;
         return toml;
@@ -26,7 +26,7 @@ public class PhysicsSettingsToml extends TomlFile {
 
     public void toPhysicsSettings(PhysicsSettings s) {
         s.wrap = boundaries.equals("periodic");
-        s.rmax = rmax * 2;
+        s.rmax = rmax;
         s.friction = friction;
         s.force = force;
         // Note: PhysicsSettings.dt is not saved in the toml file.

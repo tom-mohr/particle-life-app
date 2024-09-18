@@ -1,6 +1,7 @@
 package com.particle_life.app.shaders;
 
 import com.particle_life.app.color.Color;
+import com.particle_life.app.utils.MathUtils;
 import org.joml.Matrix4d;
 
 import java.io.IOException;
@@ -12,7 +13,7 @@ import static org.lwjgl.opengl.GL20.*;
  */
 public class ParticleShader {
 
-    public static int MIN_DETAIL = 3;
+    public static int MIN_DETAIL = 4;
     public static int MAX_DETAIL = 11;
 
     public final int shaderProgram;
@@ -75,15 +76,11 @@ public class ParticleShader {
         glUniform1f(sizeUniformLocation, size);
     }
 
+    /**
+     * How many vertices the particles should have based on the current zoom level.
+     */
     public void setDetail(int detail) {
-        if (detail < MIN_DETAIL) {
-            throw new IllegalArgumentException(String.format("Tried to set detail to %d, but allowed minimum is %d.", detail, MIN_DETAIL));
-        }
-
-        if (detail > MAX_DETAIL) {
-            throw new IllegalArgumentException(String.format("Tried to set detail to %d, but allowed maximum is %d.", detail, MAX_DETAIL));
-        }
-        glUniform1i(detailUniformLocation, detail);
+        glUniform1i(detailUniformLocation, MathUtils.clamp(detail, MIN_DETAIL, MAX_DETAIL));
     }
 
     public void setTransform(Matrix4d transform) {

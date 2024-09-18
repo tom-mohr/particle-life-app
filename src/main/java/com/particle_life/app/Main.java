@@ -15,7 +15,6 @@ import com.particle_life.app.shaders.ShaderProvider;
 import com.particle_life.app.utils.ImGuiUtils;
 import com.particle_life.app.utils.MathUtils;
 import imgui.ImGui;
-import imgui.ImGuiStyle;
 import imgui.flag.*;
 import imgui.gl3.ImGuiImplGl3;
 import imgui.type.ImBoolean;
@@ -24,7 +23,6 @@ import imgui.type.ImInt;
 import imgui.type.ImString;
 import org.joml.Matrix4d;
 import org.joml.Vector2d;
-import org.joml.Vector3d;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -106,11 +104,11 @@ public class Main extends App {
 
     // particle rendering: controls
     private boolean traces = false;
-    private final Vector3d shift = new Vector3d(0);
-    private final Vector3d shiftGoal = new Vector3d(shift);
-    private final double MIN_ZOOM = 0.1;
-    private double zoom = 1;
-    private double zoomGoal = zoom;
+    private final Vector2d camPos = new Vector2d(0.5, 0.5);  // world center
+    private final Vector2d camPosGoal = new Vector2d(camPos);
+    private double camSize = 1.0;
+    private double camSizeGoal = camSize;
+    private final double MAX_CAM_SIZE = 10;
     boolean draggingShift = false;
     boolean leftDraggingParticles = false;  // dragging with left mouse button
     boolean rightDraggingParticles = false;  // dragging with right mouse button
@@ -276,13 +274,14 @@ public class Main extends App {
             particleRenderer.particleShader.use();
             particleRenderer.particleShader.setTime(System.nanoTime() / 1000_000_000.0f);
             particleRenderer.particleShader.setPalette(getColorsFromPalette(settings.matrix.size(), palettes.getActive()));
-            setTransform(transform, width, height, shift, zoom);
+            setTransform(transform, width, height, camPos, camSize);
             particleRenderer.particleShader.setTransform(transform);
             particleRenderer.particleShader.setSize(appSettings.particleSize
-                    / Math.min(width, height)
-                    / (appSettings.keepParticleSizeIndependentOfZoom ? (float) zoom : 1));
-            particleRenderer.particleShader.setDetail(
-                    MathUtils.constrain(getDetailFromZoom(), ParticleShader.MIN_DETAIL, ParticleShader.MAX_DETAIL));
+                    * (appSettings.keepParticleSizeIndependentOfZoom ? (float) camSize : 1)
+                    / Math.min(width, height));
+            double particleSizeOnScreen = appSettings.keepParticleSizeIndependentOfZoom ?
+                    appSettings.particleSize : appSettings.particleSize / camSize;
+            particleRenderer.particleShader.setDetail((int) Math.floor(3 + particleSizeOnScreen));
 
             if (!traces || !tracesBefore) clearScreen();
             tracesBefore = traces;
@@ -312,29 +311,29 @@ public class Main extends App {
      */
     private void updateCanvas() {
         // util object for later use
-        Coordinates coordinates = new Coordinates(width, height, shift, zoom);
+        Coordinates coordinates = new Coordinates(width, height, camPos, camSize);
 
         // set cursor position and size
-        Vector3d cursorWorldCoordinates = coordinates.world(mouseX, mouseY);
-        cursor.position.set(cursorWorldCoordinates);
+        Vector2d cursorWorldCoordinates = coordinates.world(mouseX, mouseY);
+        cursor.position.set(cursorWorldCoordinates, 0);
 
         if (draggingShift) {
 
-            shift.set(coordinates
+            camPos.set(coordinates
                     .mouseShift(new Vector2d(pmouseX, pmouseY), new Vector2d(mouseX, mouseY))
-                    .shift);
-            shiftGoal.set(shift);  // don't use smoothing while dragging
+                    .camPos);
+            camPosGoal.set(camPos);  // don't use smoothing while dragging
         }
 
-        double camMovementStepSize = appSettings.camMovementSpeed / zoom;
+        double camMovementStepSize = appSettings.camMovementSpeed / camSize;
         camMovementStepSize *= renderClock.getDtMillis() / 1000.0;  // keep constant speed regardless of framerate
-        if (leftPressed) shiftGoal.add(camMovementStepSize, 0.0, 0.0);
-        if (rightPressed) shiftGoal.add(-camMovementStepSize, 0.0, 0.0);
-        if (upPressed) shiftGoal.add(0.0, camMovementStepSize, 0.0);
-        if (downPressed) shiftGoal.add(0.0, -camMovementStepSize, 0.0);
+        if (leftPressed) camPosGoal.add(-camMovementStepSize, 0.0);
+        if (rightPressed) camPosGoal.add(camMovementStepSize, 0.0);
+        if (upPressed) camPosGoal.add(0.0, -camMovementStepSize);
+        if (downPressed) camPosGoal.add(0.0, camMovementStepSize);
 
-        shift.lerp(shiftGoal, appSettings.shiftSmoothness);
-        zoom = MathUtils.lerp(zoom, zoomGoal, appSettings.zoomSmoothness);
+        camPos.lerp(camPosGoal, appSettings.shiftSmoothness);
+        camSize = MathUtils.lerp(camSize, camSizeGoal, appSettings.zoomSmoothness);
 
         // count particles under cursor
         {
@@ -381,13 +380,13 @@ public class Main extends App {
             SelectionManager<CursorAction> cursorActions = leftDraggingParticles ? cursorActions1 : cursorActions2;
             switch (cursorActions.getActive()) {
                 case MOVE -> {
-                    final Vector3d wPrev = coordinates.world(pmouseX, pmouseY);  // where the dragging started
-                    final Vector3d wNew = coordinates.world(mouseX, mouseY);  // where the dragging ended
-                    final Vector3d delta = wNew.sub(wPrev);  // dragged distance
+                    final Vector2d wPrev = coordinates.world(pmouseX, pmouseY);  // where the dragging started
+                    final Vector2d wNew = coordinates.world(mouseX, mouseY);  // where the dragging ended
+                    final Vector2d delta = wNew.sub(wPrev);  // dragged distance
                     cursorCopy.position.set(wPrev.x, wPrev.y, 0.0);  // set cursor to start of dragging
                     loop.enqueue(() -> {
                         for (Particle p : cursorCopy.getSelection(physics.particles, physics.settings.wrap)) {
-                            p.position.add(delta);
+                            p.position.add(delta.x, delta.y, 0);
                             physics.ensurePosition(p.position);  // wrap or clamp
                         }
                     });
@@ -563,7 +562,7 @@ public class Main extends App {
                 if (ImGui.treeNode("Settings##matrix")) {
                     ImFloat inputValue = new ImFloat((float) appSettings.matrixGuiStepSize);
                     if (ImGui.inputFloat("Step Size##Matrix", inputValue, 0.05f, 0.05f, "%.2f")) {
-                        appSettings.matrixGuiStepSize = MathUtils.constrain(inputValue.get(), 0.05f, 1.0f);
+                        appSettings.matrixGuiStepSize = MathUtils.clamp(inputValue.get(), 0.05f, 1.0f);
                     }
                     ImGui.treePop();
                 }
@@ -900,23 +899,23 @@ public class Main extends App {
                         [a]/[A]: change accelerator
                         [x]/[X]: change position setter
                         [r]/[R]: change matrix generator
-                                                
+                        
                         [p]: set positions
                         [t]: set types
                         [m]: set matrix
-                                                
+                        
                         [w]: toggle space wrapping
-                                                
+                        
                         [SPACE]: pause physics
-                                                
+                        
                         [F11]: toggle full screen
                         [ALT]+[F4]: quit
-                                                
+                        
                         [+]/[=]: zoom in
                         [-]: zoom out
                         [z]: reset zoom
                         [Z]: reset zoom (fit window)
-                                                
+                        
                         [c]: toggle traces (clear screen)
                         [ESCAPE]: hide GUI / show GUI
                         """);
@@ -1008,7 +1007,7 @@ public class Main extends App {
                     settings.matrix.size(),
                     new SimpleRainbowPalette()));
             Matrix4d transform = new Matrix4d();
-            setTransform(transform, SAVE_IMAGE_SIZE, SAVE_IMAGE_SIZE, new Vector3d(0), 1.0);
+            setTransform(transform, SAVE_IMAGE_SIZE, SAVE_IMAGE_SIZE, new Vector2d(0), 1.0);
             particleRenderer.particleShader.setTransform(transform);
             particleRenderer.particleShader.setSize(4f / SAVE_IMAGE_SIZE);
             particleRenderer.particleShader.setDetail(ParticleShader.MIN_DETAIL);
@@ -1069,12 +1068,10 @@ public class Main extends App {
 
             if (ImGui.beginMenu("Zoom")) {
                 if (ImGui.menuItem("100%", "z")) {
-                    resetCamera(true);
+                    resetCamera(true, false);
                 }
                 if (ImGui.menuItem("Fit", "Z")) {
-                    resetCamera(true);
-                    // zoom to fit larger dimension
-                    zoomGoal = Math.max(width, height) / (double) Math.min(width, height);
+                    resetCamera(true, true);
                 }
                 ImGui.endMenu();
             }
@@ -1190,10 +1187,15 @@ public class Main extends App {
         }
     }
 
-    private void resetCamera(boolean smooth) {
-        shiftGoal.set(0);
-        zoomGoal = 1;
-        if (!smooth) shift.set(0);
+    private void resetCamera(boolean smooth, boolean fit) {
+        camPosGoal.set(0.5, 0.5);  // world center
+        camSizeGoal = 1;
+        if (!smooth) camPos.set(0);
+
+        if (fit) {
+            // zoom to fit larger dimension
+            camSizeGoal = (double) Math.min(width, height) / Math.max(width, height);
+        }
     }
 
     private Color[] getColorsFromPalette(int n, Palette palette) {
@@ -1205,23 +1207,9 @@ public class Main extends App {
     }
 
     private void setTransform(Matrix4d targetMatrix,
-                              float width, float height, Vector3d shift, double zoom) {
+                              float width, float height, Vector2d camPos, double camSize) {
         targetMatrix.identity();
-        new Coordinates(width, height, shift, zoom).apply(targetMatrix);
-    }
-
-    private int getDetailFromZoom() {
-
-        double particleSizeOnScreen = appSettings.keepParticleSizeIndependentOfZoom ? appSettings.particleSize : appSettings.particleSize * zoom;
-
-        double minDetailSize = 4;  // at this size, the detail is 4
-        double detailPerSize = 0.4;// from then on, the detail increases with this rate (per size on screen in pixels)
-
-        if (particleSizeOnScreen < minDetailSize) {
-            return 4;
-        } else {
-            return (int) Math.floor(minDetailSize + (particleSizeOnScreen - minDetailSize) * detailPerSize);
-        }
+        new Coordinates(width, height, camPos, camSize).apply(targetMatrix);
     }
 
     @Override
@@ -1269,14 +1257,13 @@ public class Main extends App {
             case "L" -> palettes.stepBackward();
             case "s" -> shaders.stepForward();
             case "S" -> shaders.stepBackward();
-            case "+", "=" -> zoomGoal *= Math.pow(appSettings.zoomStepFactor, 2);// more steps than when scrolling
-            case "-" -> zoomGoal = Math.max(MIN_ZOOM, zoomGoal / Math.pow(appSettings.zoomStepFactor, 2));
-            case "z" -> resetCamera(true);
-            case "Z" -> {
-                resetCamera(true);
-                // zoom to fit larger dimension
-                zoomGoal = Math.max(width, height) / (double) Math.min(width, height);
+            case "+", "=" -> camSizeGoal /= Math.pow(appSettings.zoomStepFactor, 2);// more steps than when scrolling
+            case "-" -> {
+                camSizeGoal *= Math.pow(appSettings.zoomStepFactor, 2);
+                camSizeGoal = Math.min(camSizeGoal, MAX_CAM_SIZE);
             }
+            case "z" -> resetCamera(true, false);
+            case "Z" -> resetCamera(true, true);
             case "p" -> loop.enqueue(physics::setPositions);
             case "t" -> loop.enqueue(() -> {
                 TypeSetter previousTypeSetter = physics.typeSetter;
@@ -1367,7 +1354,7 @@ public class Main extends App {
         if (bothPressed) {
             // change time step
             appSettings.dt *= Math.pow(1.2, -y);
-            appSettings.dt = MathUtils.constrain(appSettings.dt, 0.00f, 0.1f);
+            appSettings.dt = MathUtils.clamp(appSettings.dt, 0.00f, 0.1f);
             // deactivate auto dt
             appSettings.autoDt = false;
         } else if (shiftPressed) {
@@ -1379,13 +1366,15 @@ public class Main extends App {
         } else {
             // change camera zoom
 
-            double zoomIncrease = Math.pow(appSettings.zoomStepFactor, y);
+            double factor = Math.pow(appSettings.zoomStepFactor, -y);
 
-            Coordinates c = new Coordinates(width, height, shiftGoal, zoomGoal);  // use "goal" shift and zoom
-            c.zoomInOnMouse(new Vector2d(mouseX, mouseY), Math.max(MIN_ZOOM, zoomGoal * zoomIncrease));
+            Coordinates coordinates = new Coordinates(width, height, camPosGoal, camSizeGoal);
+            double newCamSize = camSizeGoal * factor;
+            newCamSize = Math.min(newCamSize, MAX_CAM_SIZE);
+            coordinates.changeCamSizeFixed(coordinates.world(mouseX, mouseY), newCamSize);
 
-            zoomGoal = c.zoom;
-            shiftGoal.set(c.shift);
+            camSizeGoal = coordinates.camSize;
+            camPosGoal.set(coordinates.camPos);
         }
     }
 
