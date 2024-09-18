@@ -1007,7 +1007,7 @@ public class Main extends App {
                     settings.matrix.size(),
                     new SimpleRainbowPalette()));
             Matrix4d transform = new Matrix4d();
-            setTransform(transform, SAVE_IMAGE_SIZE, SAVE_IMAGE_SIZE, new Vector2d(0), 1.0);
+            setTransform(transform, SAVE_IMAGE_SIZE, SAVE_IMAGE_SIZE, new Vector2d(0.5, 0.5), 1.0);
             particleRenderer.particleShader.setTransform(transform);
             particleRenderer.particleShader.setSize(4f / SAVE_IMAGE_SIZE);
             particleRenderer.particleShader.setDetail(ParticleShader.MIN_DETAIL);
