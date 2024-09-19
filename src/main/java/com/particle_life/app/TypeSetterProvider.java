@@ -12,26 +12,26 @@ public class TypeSetterProvider implements InfoWrapperProvider<TypeSetter> {
     public List<InfoWrapper<TypeSetter>> create() throws Exception {
         return List.of(
                 new InfoWrapper<>("fully random", new DefaultTypeSetter()),
-                new InfoWrapper<>("randomize 10%",
-                        (position, velocity, type, nTypes) -> Math.random() < 0.1 ? mapType(Math.random(), nTypes) : type
+                new InfoWrapper<>("randomize 10%", (position, velocity, type, nTypes) ->
+                        Math.random() < 0.1 ? mapType(Math.random(), nTypes) : type
                 ),
-                new InfoWrapper<>("slices",
-                        (position, velocity, type, nTypes) -> mapType(0.5 * position.x + 0.5, nTypes)
+                new InfoWrapper<>("slices", (position, velocity, type, nTypes) ->
+                        mapType(position.x, nTypes)
                 ),
-                new InfoWrapper<>("onion",
-                        (position, velocity, type, nTypes) -> mapType(position.length(), nTypes)
+                new InfoWrapper<>("onion", (position, velocity, type, nTypes) ->
+                        mapType(position.sub(0.5, 0.5, 0).length() * 2, nTypes)
                 ),
-                new InfoWrapper<>("rotate",
-                        (position, velocity, type, nTypes) -> (type + 1) % nTypes
+                new InfoWrapper<>("rotate", (position, velocity, type, nTypes) ->
+                        (type + 1) % nTypes
                 ),
-                new InfoWrapper<>("flip",
-                        (position, velocity, type, nTypes) -> nTypes - 1 - type
+                new InfoWrapper<>("flip", (position, velocity, type, nTypes) ->
+                        nTypes - 1 - type
                 ),
-                new InfoWrapper<>("more of first",
-                        (position, velocity, type, nTypes) -> mapType(Math.random() * Math.random(), nTypes)
+                new InfoWrapper<>("more of first", (position, velocity, type, nTypes) ->
+                        mapType(Math.random() * Math.random(), nTypes)
                 ),
-                new InfoWrapper<>("kill still",
-                        (position, velocity, type, nTypes) -> velocity.length() < 0.01 ? nTypes - 1 : type
+                new InfoWrapper<>("kill still", (position, velocity, type, nTypes) ->
+                        velocity.length() < 0.01 ? nTypes - 1 : type
                 )
         );
     }
