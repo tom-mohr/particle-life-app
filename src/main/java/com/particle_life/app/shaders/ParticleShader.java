@@ -21,6 +21,8 @@ public class ParticleShader {
     private final int timeUniformLocation;
     private final int paletteUniformLocation;
     private final int transformUniformLocation;
+    private final int camTopLeftUniformLocation;
+    private final int wrapUniformLocation;
     private final int sizeUniformLocation;
     private final int detailUniformLocation;
 
@@ -40,6 +42,8 @@ public class ParticleShader {
         timeUniformLocation = glGetUniformLocation(shaderProgram, "time");
         paletteUniformLocation = glGetUniformLocation(shaderProgram, "palette");
         transformUniformLocation = glGetUniformLocation(shaderProgram, "transform");
+        camTopLeftUniformLocation = glGetUniformLocation(shaderProgram, "camTopLeft");
+        wrapUniformLocation = glGetUniformLocation(shaderProgram, "wrap");
         sizeUniformLocation = glGetUniformLocation(shaderProgram, "size");
         detailUniformLocation = glGetUniformLocation(shaderProgram, "detail");
 
@@ -96,5 +100,13 @@ public class ParticleShader {
         while ((errorCode = glGetError()) != GL_NO_ERROR) {
             System.err.printf("OpenGL Error: %d%n", errorCode);
         }
+    }
+
+    public void setCamTopLeft(float camLeft, float camTop) {
+        glUniform2f(camTopLeftUniformLocation, camLeft, camTop);
+    }
+
+    public void setWrap(boolean wrap) {
+        glUniform1i(wrapUniformLocation, wrap ? 1 : 0);
     }
 }

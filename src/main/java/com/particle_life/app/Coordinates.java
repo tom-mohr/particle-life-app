@@ -51,10 +51,11 @@ class Coordinates {
         // Note: These operations will be applied in reverse order to the vector
         //       when transforming with the matrix
 
-        transform.scale(1, -1, 1);  // flip y
+//        transform.scale(1, -1, 1);  // flip y
 
         // OpenGL uses [-1, 1] as default coordinate system
-        // -> map coordinates from [-0.5, 0.5] to [-1, 1]
+        // -> map coordinates from [0, 1] to [-1, 1]
+        transform.translate(-1, -1, 0);
         transform.scale(2, 2, 1);
 
         // quad

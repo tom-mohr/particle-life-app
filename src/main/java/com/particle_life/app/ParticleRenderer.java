@@ -1,6 +1,7 @@
 package com.particle_life.app;
 
 import com.particle_life.app.shaders.ParticleShader;
+import org.joml.Vector2i;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL15.*;
@@ -14,6 +15,7 @@ class ParticleRenderer {
     private int vboX;
     private int vboV;
     private int vboT;
+    private int fbo;
 
     public ParticleShader particleShader = null;
     /**
@@ -27,6 +29,7 @@ class ParticleRenderer {
         vboX = glGenBuffers();
         vboV = glGenBuffers();
         vboT = glGenBuffers();
+        fbo = glGenFramebuffers();  // create a separate framebuffer for rendering to texture
     }
 
     void bufferParticleData(double[] x, double[] v, int[] types) {
@@ -101,6 +104,36 @@ class ParticleRenderer {
         particleShader.use();
         glBindVertexArray(vao);
         glDrawArrays(GL_POINTS, 0, lastBufferedSize);
+    }
+
+    void renderParticlesToTexture(int textureId, boolean clear) {
+        // bind
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureId, 0);
+
+        if (clear) {
+            // The OpenGL Specification states that glClear() only clears the scissor rectangle
+            // when the scissor test is enabled.
+            glDisable(GL_SCISSOR_TEST);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear the framebuffer
+        }
+
+        Vector2i textureSize = textureDimensions(textureId);
+        renderParticles(textureSize.x, textureSize.y);
+
+        // unbind
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    private Vector2i textureDimensions(int textureId) {
+        // query dimensions of texture
+        int[] width = new int[1];
+        int[] height = new int[1];
+        glBindTexture(GL_TEXTURE_2D, textureId);
+        glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, width);
+        glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, height);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        return new Vector2i(width[0], height[0]);
     }
 
     int[] renderParticlesToImage(int width, int height) {
