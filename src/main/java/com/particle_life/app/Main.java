@@ -1382,10 +1382,11 @@ public class Main extends App {
                     showSavesPopup.set(true);
                     requestedSaveCardsLoading.set(true);
 
-                    // Clear mods manually, because releasing the control key
+                    // Clear key states manually, because releasing [ctrl]+[s]
                     // won't be captured once the popup is open.
                     leftControlPressed = false;
                     rightControlPressed = false;
+                    sPressed = false;
                 }
             }
             return;
