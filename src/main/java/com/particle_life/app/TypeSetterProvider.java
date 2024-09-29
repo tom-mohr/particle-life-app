@@ -11,7 +11,7 @@ public class TypeSetterProvider implements InfoWrapperProvider<TypeSetter> {
     @Override
     public List<InfoWrapper<TypeSetter>> create() throws Exception {
         return List.of(
-                new InfoWrapper<>("fully random", new DefaultTypeSetter()),
+                new InfoWrapper<>("random", new DefaultTypeSetter()),
                 new InfoWrapper<>("randomize 10%", (position, velocity, type, nTypes) ->
                         Math.random() < 0.1 ? mapType(Math.random(), nTypes) : type
                 ),

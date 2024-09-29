@@ -13,7 +13,7 @@ class MatrixGeneratorProvider implements InfoWrapperProvider<MatrixGenerator> {
     @Override
     public List<InfoWrapper<MatrixGenerator>> create() throws Exception {
         return List.of(
-                new InfoWrapper<>("fully random", new DefaultMatrixGenerator()),
+                new InfoWrapper<>("random", new DefaultMatrixGenerator()),
                 new InfoWrapper<>("symmetry", size -> {
                     DefaultMatrix m = new DefaultMatrix(size);
                     m.randomize();

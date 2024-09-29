@@ -187,6 +187,7 @@ public class Main extends App {
             cursorActions1 = new SelectionManager<>(new CursorActionProvider());
             cursorActions2 = new SelectionManager<>(new CursorActionProvider());
 
+            positionSetters.setActiveByName(appSettings.positionSetter);
             cursorActions1.setActiveByName(appSettings.cursorActionLeft);
             cursorActions2.setActiveByName(appSettings.cursorActionRight);
         } catch (Exception e) {
@@ -272,6 +273,7 @@ public class Main extends App {
             appSettings.cursorSize = cursor.size;
             appSettings.cursorActionLeft = cursorActions1.getActiveName();
             appSettings.cursorActionRight = cursorActions2.getActiveName();
+            appSettings.positionSetter = positionSetters.getActiveName();
             // Note: Why are we not storing the fullscreen state here?
             // I.e. why not appSettings.startInFullscreen = isFullscreen()?
             // Because here, the glfw window is already closed,

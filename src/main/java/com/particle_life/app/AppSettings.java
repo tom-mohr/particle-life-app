@@ -51,5 +51,7 @@ public class AppSettings extends TomlFile {
     @TomlKey("time_step")
     public double dt = 0.02;
     @TomlKey("auto_time_step")
-    public boolean autoDt = true;
+    public boolean autoDt = false;
+    @TomlKey("position_setter")
+    public String positionSetter = "centered";
 }
