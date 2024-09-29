@@ -4,7 +4,7 @@ import org.joml.Matrix4d;
 
 import java.io.IOException;
 
-import static org.lwjgl.opengl.GL20.*;
+import static org.lwjgl.opengl.GL20C.*;
 
 public class CursorShader {
 

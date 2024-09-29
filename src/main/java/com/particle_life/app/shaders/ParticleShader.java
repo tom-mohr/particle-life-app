@@ -1,12 +1,11 @@
 package com.particle_life.app.shaders;
 
 import com.particle_life.app.color.Color;
-import com.particle_life.app.utils.MathUtils;
 import org.joml.Matrix4d;
 
 import java.io.IOException;
 
-import static org.lwjgl.opengl.GL20.*;
+import static org.lwjgl.opengl.GL20C.*;
 
 /**
  * Represents data about a particle shader.

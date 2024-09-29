@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.opengl.GL11C.*;
 
 class ImGuiCardView {
 

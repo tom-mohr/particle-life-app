@@ -9,7 +9,7 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.lwjgl.opengl.GL32.*;
+import static org.lwjgl.opengl.GL32C.*;
 
 //todo: custom docs.
 /**

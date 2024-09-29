@@ -4,8 +4,8 @@ import com.particle_life.app.io.ResourceAccess;
 
 import java.io.IOException;
 
-import static org.lwjgl.opengl.GL20.*;
-import static org.lwjgl.opengl.GL32.GL_GEOMETRY_SHADER;
+import static org.lwjgl.opengl.GL20C.*;
+import static org.lwjgl.opengl.GL32C.GL_GEOMETRY_SHADER;
 
 final class ShaderUtil {
 

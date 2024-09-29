@@ -43,11 +43,11 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
-import static org.lwjgl.opengl.GL11.*;
-import static org.lwjgl.opengl.GL13.GL_MULTISAMPLE;
-import static org.lwjgl.opengl.GL30.*;
-import static org.lwjgl.opengl.GL32.GL_TEXTURE_2D_MULTISAMPLE;
-import static org.lwjgl.opengl.GL32.glTexImage2DMultisample;
+import static org.lwjgl.opengl.GL11C.*;
+import static org.lwjgl.opengl.GL13C.GL_MULTISAMPLE;
+import static org.lwjgl.opengl.GL30C.*;
+import static org.lwjgl.opengl.GL32C.GL_TEXTURE_2D_MULTISAMPLE;
+import static org.lwjgl.opengl.GL32C.glTexImage2DMultisample;
 
 public class Main extends App {
 

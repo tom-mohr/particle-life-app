@@ -1,13 +1,12 @@
 package com.particle_life.app.utils;
 
-import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.opengl.GL11C.*;
 import static org.lwjgl.opengl.GL11C.glBindTexture;
 import static org.lwjgl.opengl.GL11C.glGenTextures;
-import static org.lwjgl.opengl.GL30.*;
-import static org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER;
+import static org.lwjgl.opengl.GL30C.*;
 import static org.lwjgl.opengl.GL30C.glGenFramebuffers;
-import static org.lwjgl.opengl.GL32.GL_TEXTURE_2D_MULTISAMPLE;
-import static org.lwjgl.opengl.GL32.glTexImage2DMultisample;
+import static org.lwjgl.opengl.GL32C.GL_TEXTURE_2D_MULTISAMPLE;
+import static org.lwjgl.opengl.GL32C.glTexImage2DMultisample;
 
 /**
  * This is a utility class for creating a multisampled framebuffer
