@@ -1,8 +1,12 @@
 #version 410
 
 in vec4 fColor;
-out vec4 color;
+in vec2 texCoord;  // normalized [-1, 1]
+out vec4 FragColor;
 
-void main (void) {
-    color = fColor;
+void main(void) {
+
+    if (length(texCoord) > 1.0) discard; // discard fragments outside the circle radius
+
+    FragColor = fColor; // draw the circle with the assigned color
 }

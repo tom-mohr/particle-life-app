@@ -136,7 +136,15 @@ class ImGuiCardView {
             // image
             if (card.img != -1) {
                 ImGui.setCursorScreenPos(absPos.x, absPos.y);
-                ImGui.image(card.img, cardSize, cardSize);
+                ImGui.getWindowDrawList().addImageRounded(
+                        card.img,
+                        absPos.x, absPos.y,
+                        absPos.x + cardSize, absPos.y + cardSize,
+                        0, 0, 1, 1,
+                        0xFFFFFFFF,
+                        8
+                );
+//                ImGui.image(card.img, cardSize, cardSize);
             }
 
             // title text

@@ -114,7 +114,6 @@ public abstract class App {
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 
         // Create the window
         long monitor = glfwGetPrimaryMonitor();
@@ -216,6 +215,8 @@ public abstract class App {
                         case GLFW_KEY_RIGHT_SHIFT -> "RIGHT_SHIFT";
                         case GLFW_KEY_LEFT_CONTROL -> "LEFT_CONTROL";
                         case GLFW_KEY_RIGHT_CONTROL -> "RIGHT_CONTROL";
+                        case GLFW_KEY_LEFT_ALT -> "LEFT_ALT";
+                        case GLFW_KEY_RIGHT_ALT -> "RIGHT_ALT";
                         case GLFW_KEY_ESCAPE ->  "ESCAPE";
                         default -> null;
                     };

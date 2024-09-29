@@ -13,16 +13,14 @@ import static org.lwjgl.opengl.GL20.*;
  */
 public class ParticleShader {
 
-    public static int MIN_DETAIL = 4;
-    public static int MAX_DETAIL = 11;
-
     public final int shaderProgram;
 
     private final int timeUniformLocation;
     private final int paletteUniformLocation;
     private final int transformUniformLocation;
+    private final int camTopLeftUniformLocation;
+    private final int wrapUniformLocation;
     private final int sizeUniformLocation;
-    private final int detailUniformLocation;
 
     public final int xAttribLocation;
     public final int vAttribLocation;
@@ -40,8 +38,9 @@ public class ParticleShader {
         timeUniformLocation = glGetUniformLocation(shaderProgram, "time");
         paletteUniformLocation = glGetUniformLocation(shaderProgram, "palette");
         transformUniformLocation = glGetUniformLocation(shaderProgram, "transform");
+        camTopLeftUniformLocation = glGetUniformLocation(shaderProgram, "camTopLeft");
+        wrapUniformLocation = glGetUniformLocation(shaderProgram, "wrap");
         sizeUniformLocation = glGetUniformLocation(shaderProgram, "size");
-        detailUniformLocation = glGetUniformLocation(shaderProgram, "detail");
 
         xAttribLocation = glGetAttribLocation(shaderProgram, "x");
         vAttribLocation = glGetAttribLocation(shaderProgram, "v");
@@ -76,13 +75,6 @@ public class ParticleShader {
         glUniform1f(sizeUniformLocation, size);
     }
 
-    /**
-     * How many vertices the particles should have based on the current zoom level.
-     */
-    public void setDetail(int detail) {
-        glUniform1i(detailUniformLocation, MathUtils.clamp(detail, MIN_DETAIL, MAX_DETAIL));
-    }
-
     public void setTransform(Matrix4d transform) {
         glUniformMatrix4fv(transformUniformLocation, false, transform.get(this.transform));
     }
@@ -96,5 +88,13 @@ public class ParticleShader {
         while ((errorCode = glGetError()) != GL_NO_ERROR) {
             System.err.printf("OpenGL Error: %d%n", errorCode);
         }
+    }
+
+    public void setCamTopLeft(float camLeft, float camTop) {
+        glUniform2f(camTopLeftUniformLocation, camLeft, camTop);
+    }
+
+    public void setWrap(boolean wrap) {
+        glUniform1i(wrapUniformLocation, wrap ? 1 : 0);
     }
 }

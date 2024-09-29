@@ -1,8 +1,6 @@
 package com.particle_life.app.cursors;
 
 import com.particle_life.Particle;
-import com.particle_life.app.shaders.CursorShader;
-import org.joml.Matrix4d;
 import org.joml.Vector3d;
 
 import java.io.IOException;
@@ -15,11 +13,6 @@ public class Cursor {
     public double size = 0.1;
     public CursorShape shape;
 
-    private final CursorShader cursorShader = new CursorShader();
-
-    public Cursor() throws IOException {
-    }
-
     public boolean isInside(Particle particle, boolean wrap) {
         if (size == 0.0) return false;
 
@@ -31,8 +24,8 @@ public class Cursor {
             // -> wrap connection on [-0.5, 0.5)
             for (int i = 0; i < 3; i++) {
                 double val = delta.get(i);
-                if (val >= 0.5) delta.setComponent(i, val - 1.0);
-                else if (val < -0.5) delta.setComponent(i, val + 1.0);
+                val -= Math.floor(val + 0.5);
+                delta.setComponent(i, val);
             }
         }
 
@@ -57,12 +50,7 @@ public class Cursor {
         return count;
     }
 
-    public void draw(Matrix4d transform) {
-        cursorShader.use();
-        cursorShader.setTransform(transform
-                .translate(position)
-                .scale(size)
-        );
+    public void draw() {
         if (!shape.isInitialized()) shape.initialize();  // lazy initialize shapes (register VBOs etc. for drawing)
         shape.draw();
     }

@@ -21,7 +21,7 @@ class Coordinates {
     Vector2d screen(Vector3d world) {
         Vector2d x = new Vector2d(world.x, world.y);
         x.sub(camPos);
-        x.div(camSize);
+        x.div(camSize).mul(2);  // divide by (camSize * 0.5)
 
         // quad
         // (Scales square to fit smaller dimension -- will be skewed along larger dimension of screen)
@@ -33,7 +33,9 @@ class Coordinates {
             x.y *= windowWidth / windowHeight;
         }
 
-        x.add(0.5, 0.5);
+        // map from [-1, 1] to [0, windowWidth] and [0, windowHeight]
+        x.add(1, 1);
+        x.div(2, 2);
         x.mul(windowWidth, windowHeight);
 
         return x;
@@ -48,14 +50,10 @@ class Coordinates {
     }
 
     public void apply(Matrix4d transform) {
+        transform.identity();
+
         // Note: These operations will be applied in reverse order to the vector
         //       when transforming with the matrix
-
-        transform.scale(1, -1, 1);  // flip y
-
-        // OpenGL uses [-1, 1] as default coordinate system
-        // -> map coordinates from [-0.5, 0.5] to [-1, 1]
-        transform.scale(2, 2, 1);
 
         // quad
         if (windowWidth > windowHeight) {
@@ -66,7 +64,7 @@ class Coordinates {
             transform.scale(1, windowWidth / windowHeight, 1);
         }
 
-        transform.scale(1 / camSize);
+        transform.scale(2 / camSize);  // divide by (camSize * 0.5)
         transform.translate(-camPos.x, -camPos.y, 0);
     }
 

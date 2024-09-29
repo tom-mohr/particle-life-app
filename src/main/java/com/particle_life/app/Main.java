@@ -2,18 +2,20 @@ package com.particle_life.app;
 
 import com.particle_life.*;
 import com.particle_life.app.color.Color;
-import com.particle_life.app.color.SimpleRainbowPalette;
 import com.particle_life.app.color.Palette;
 import com.particle_life.app.color.PalettesProvider;
+import com.particle_life.app.color.SimpleRainbowPalette;
 import com.particle_life.app.cursors.*;
 import com.particle_life.app.io.MatrixIO;
 import com.particle_life.app.io.ParticlesIO;
 import com.particle_life.app.io.ResourceAccess;
 import com.particle_life.app.selection.SelectionManager;
+import com.particle_life.app.shaders.CursorShader;
 import com.particle_life.app.shaders.ParticleShader;
 import com.particle_life.app.shaders.ShaderProvider;
 import com.particle_life.app.utils.ImGuiUtils;
 import com.particle_life.app.utils.MathUtils;
+import com.particle_life.app.utils.MultisampledFramebuffer;
 import imgui.ImGui;
 import imgui.flag.*;
 import imgui.gl3.ImGuiImplGl3;
@@ -42,8 +44,10 @@ import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 import static org.lwjgl.opengl.GL11.*;
-import static org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT;
 import static org.lwjgl.opengl.GL13.GL_MULTISAMPLE;
+import static org.lwjgl.opengl.GL30.*;
+import static org.lwjgl.opengl.GL32.GL_TEXTURE_2D_MULTISAMPLE;
+import static org.lwjgl.opengl.GL32.glTexImage2DMultisample;
 
 public class Main extends App {
 
@@ -73,6 +77,7 @@ public class Main extends App {
     private SelectionManager<PositionSetter> positionSetters;
     private SelectionManager<TypeSetter> typeSetters;
     private Cursor cursor;
+    private CursorShader cursorShader;
     private SelectionManager<CursorShape> cursorShapes;
     private SelectionManager<CursorAction> cursorActions1;
     private SelectionManager<CursorAction> cursorActions2;
@@ -120,6 +125,8 @@ public class Main extends App {
     boolean rightShiftPressed = false;
     boolean leftControlPressed = false;
     boolean rightControlPressed = false;
+    boolean leftAltPressed = false;
+    boolean rightAltPressed = false;
 
     // GUI: constants that control how the GUI behaves
     private long physicsNotReactingThreshold = 3000;  // time in milliseconds
@@ -142,8 +149,9 @@ public class Main extends App {
     private boolean requestedSaveImage = false;
     private File selectedSaveFile = null;
 
-    // GUI: store data on the current state of the GUI
-    private boolean tracesBefore = traces;// if "traces" was enabled in last frame
+    // offscreen rendering buffers
+    private MultisampledFramebuffer worldTexture;  // particles
+    private MultisampledFramebuffer cursorTexture;  // cursor
 
     @Override
     protected void setup() {
@@ -156,13 +164,14 @@ public class Main extends App {
 
         particleRenderer.init();
 
-        // cursor object must be created after renderer.init()
         try {
-            cursor = new Cursor();
+            cursorShader = new CursorShader();
         } catch (IOException e) {
             this.error = e;
             return;
         }
+
+        cursor = new Cursor();
         cursor.size = appSettings.cursorSize;
 
         try {
@@ -198,6 +207,24 @@ public class Main extends App {
         if (palettes.hasName(appSettings.palette)) {
             palettes.setActive(palettes.getIndexByName(appSettings.palette));
         }
+
+        // generate offscreen frame buffer to render particles to a multisampled texture
+        // and also a simple texture for converting the multisampled texture to a single-sampled texture
+        // (this is necessary because ImGui can't handle multisampled textures in the drawlist)
+        worldTexture = new MultisampledFramebuffer();
+        worldTexture.init();
+        glBindTexture(GL_TEXTURE_2D, worldTexture.textureSingle);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        // create offscreen framebuffer for cursor rendering
+        cursorTexture = new MultisampledFramebuffer();
+        cursorTexture.init();
+        glBindTexture(GL_TEXTURE_2D, cursorTexture.textureSingle);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glBindTexture(GL_TEXTURE_2D, 0);
     }
 
     private void createPhysics() {
@@ -260,50 +287,156 @@ public class Main extends App {
         imGuiGl3.dispose();
     }
 
+    private void ensureTextureDimensions(int target, int textureId, int width, int height) {
+        // bind
+        glBindTexture(target, textureId);
+
+        // query dimensions of texture
+        int[] intBuffer = new int[1];
+        glGetTexLevelParameteriv(target, 0, GL_TEXTURE_WIDTH, intBuffer);
+        int textureWidth = intBuffer[0];
+        glGetTexLevelParameteriv(target, 0, GL_TEXTURE_HEIGHT, intBuffer);
+        int textureHeight = intBuffer[0];
+
+        // set texture dimensions if necessary
+        if (width != textureWidth || height != textureHeight) {
+            if (target == GL_TEXTURE_2D) {
+                glTexImage2D(target, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+            } else if (target == GL_TEXTURE_2D_MULTISAMPLE) {
+                glTexImage2DMultisample(target, 16, GL_RGBA, width, height, true);
+            }
+        }
+
+        // unbind
+        glBindTexture(target, 0);
+    }
+
     @Override
     protected void draw(double dt) {
         if (this.error == null) {
             renderClock.tick();
             updateCanvas();
-            ImGui.newFrame();
-            // Any Dear ImGui code must go between ImGui.newFrame() and ImGui.render()
-            if (!traces && showGui.get()) buildGui();
-            ImGui.render();
+
+            int texWidth, texHeight;
+            int desiredTexSize = (int) Math.round(Math.min(width, height) / camSize);
+            if (camSize > 1) {
+                texWidth = desiredTexSize;
+                texHeight = desiredTexSize;
+                new Coordinates((float) desiredTexSize, (float) desiredTexSize,
+                        new Vector2d(0.5, 0.5), 1).apply(transform);
+            } else {
+                if (settings.wrap) {
+                    texWidth = Math.min(desiredTexSize, width);
+                    texHeight = Math.min(desiredTexSize, height);
+                } else {
+                    texWidth = width;
+                    texHeight = height;
+                }
+                Vector2d texCamSize = new Vector2d(camSize);
+                if (width > height) texCamSize.x *= (double) texWidth / texHeight;
+                else if (height > width) texCamSize.y *= (double) texHeight / texWidth;
+                new Coordinates((float) texWidth, (float) texHeight,
+                        new Vector2d(texCamSize.x / 2, texCamSize.y / 2), camSize).apply(transform);
+            }
+
+            worldTexture.ensureSize(texWidth, texHeight);
+
+            ParticleShader particleShader = shaders.getActive();
 
             // set shader variables
-            particleRenderer.particleShader.use();
-            particleRenderer.particleShader.setTime(System.nanoTime() / 1000_000_000.0f);
-            particleRenderer.particleShader.setPalette(getColorsFromPalette(settings.matrix.size(), palettes.getActive()));
-            setTransform(transform, width, height, camPos, camSize);
-            particleRenderer.particleShader.setTransform(transform);
-            particleRenderer.particleShader.setSize(appSettings.particleSize
+            particleShader.use();
+
+            particleShader.setTime(System.nanoTime() / 1000_000_000.0f);
+            particleShader.setPalette(getColorsFromPalette(settings.matrix.size(), palettes.getActive()));
+            particleShader.setTransform(transform);
+
+            Vector2d extendedCamSize = new Vector2d(camSize, camSize);
+            if (width > height) extendedCamSize.x *= (double) width / height;
+            else if (height > width) extendedCamSize.y *= (double) height / width;
+            double camLeft = camPos.x - extendedCamSize.x / 2;
+            double camTop = camPos.y - extendedCamSize.y / 2;
+            double camRight = camPos.x + extendedCamSize.x / 2;
+            double camBottom = camPos.y + extendedCamSize.y / 2;
+            if (camSize > 1) {
+                particleShader.setCamTopLeft(0, 0);
+            } else {
+                particleShader.setCamTopLeft((float) camLeft, (float) camTop);
+            }
+            particleShader.setWrap(settings.wrap);
+            particleShader.setSize(appSettings.particleSize
                     * (appSettings.keepParticleSizeIndependentOfZoom ? (float) camSize : 1)
                     / Math.min(width, height));
-            double particleSizeOnScreen = appSettings.keepParticleSizeIndependentOfZoom ?
-                    appSettings.particleSize : appSettings.particleSize / camSize;
-            particleRenderer.particleShader.setDetail((int) Math.floor(3 + particleSizeOnScreen));
 
-            if (!traces || !tracesBefore) clearScreen();
-            tracesBefore = traces;
-            particleRenderer.renderParticles(width, height); // particles
-            if (appSettings.showCursor) cursor.draw(transform); // cursor
-            imGuiGl3.render(ImGui.getDrawData());  // gui
+            if (!traces) worldTexture.clear(0, 0, 0, 0);
+
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  // alpha blending
+//            glBlendFunc(GL_SRC_ALPHA, GL_ONE);  // additive
+//            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_COLOR);  // subtractive
+//            glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_COLOR);  // screen
+
+            glViewport(0, 0, texWidth, texHeight);
+
+            glBindFramebuffer(GL_FRAMEBUFFER, worldTexture.framebufferMulti);
+            particleRenderer.drawParticles();
+            worldTexture.toSingleSampled();
+
+            glBindTexture(GL_TEXTURE_2D, worldTexture.textureSingle);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, settings.wrap ? GL_REPEAT : GL_CLAMP_TO_BORDER);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, settings.wrap ? GL_REPEAT : GL_CLAMP_TO_BORDER);
+            glBindTexture(GL_TEXTURE_2D, 0);
+
+            // render cursor onto separate framebuffer
+            cursorTexture.ensureSize(width, height);
+            cursorTexture.clear(0, 0, 0, 0);
+            if (appSettings.showCursor) {
+                new Coordinates((float) width, (float) height, camPos, camSize).apply(transform);
+                transform.translate(cursor.position);
+                transform.scale(cursor.size);
+
+                glViewport(0, 0, width, height);
+
+                glBindFramebuffer(GL_FRAMEBUFFER, cursorTexture.framebufferMulti);
+
+                cursorShader.use();
+                cursorShader.setTransform(transform);
+                cursor.draw();
+            }
+            // convert multisampled texture to single-sampled texture
+            cursorTexture.toSingleSampled();
+
+            // render GUI
+            // Note: Any Dear ImGui code must go between ImGui.newFrame() and ImGui.render().
+            ImGui.newFrame();
+            if (camSize > 1) {
+                ImGui.getBackgroundDrawList().addImage(worldTexture.textureSingle, 0, 0, width, height,
+                        (float) camLeft, (float) camTop,
+                        (float) camRight, (float) camBottom);
+            } else {
+                ImGui.getBackgroundDrawList().addImage(worldTexture.textureSingle, 0, 0, width, height,
+                        0, 0, (float) width / texWidth, (float) height / texHeight);
+            }
+            ImGui.getBackgroundDrawList().addImage(cursorTexture.textureSingle, 0, 0, width, height,
+                    0, 0, 1, 1);
+
+            if (showGui.get()) buildGui();
+            ImGui.render();
+
+            glDisable(GL_SCISSOR_TEST);
+            glClearColor(0, 0, 0, 1);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            imGuiGl3.render(ImGui.getDrawData());
         } else {
             ImGui.newFrame();
             buildErrorGui();
             ImGui.render();
-            clearScreen();
-            imGuiGl3.render(ImGui.getDrawData());  // gui
-        }
-    }
 
-    /**
-     * Clears the default frame buffer.
-     */
-    private void clearScreen() {
-        // The OpenGL Specification states that glClear() only clears the scissor rectangle when the scissor test is enabled.
-        glDisable(GL_SCISSOR_TEST);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear the framebuffer
+            glDisable(GL_SCISSOR_TEST);
+            glClearColor(0, 0, 0, 1);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            imGuiGl3.render(ImGui.getDrawData());
+        }
     }
 
     /**
@@ -325,7 +458,7 @@ public class Main extends App {
             camPosGoal.set(camPos);  // don't use smoothing while dragging
         }
 
-        double camMovementStepSize = appSettings.camMovementSpeed / camSize;
+        double camMovementStepSize = appSettings.camMovementSpeed * camSize;
         camMovementStepSize *= renderClock.getDtMillis() / 1000.0;  // keep constant speed regardless of framerate
         if (leftPressed) camPosGoal.add(-camMovementStepSize, 0.0);
         if (rightPressed) camPosGoal.add(camMovementStepSize, 0.0);
@@ -426,13 +559,14 @@ public class Main extends App {
             }
         }
 
-        particleRenderer.particleShader = shaders.getActive();  // need to assign a shader before buffering particle data
-
         if (newSnapshotAvailable.get()) {
 
             // get local copy of snapshot
 
-            particleRenderer.bufferParticleData(physicsSnapshot.positions, physicsSnapshot.velocities, physicsSnapshot.types);
+            particleRenderer.bufferParticleData(shaders.getActive(),
+                    physicsSnapshot.positions,
+                    physicsSnapshot.velocities,
+                    physicsSnapshot.types);
             settings = physicsSnapshot.settings.deepCopy();
             particleCount = physicsSnapshot.particleCount;
             preferredNumberOfThreads = physics.preferredNumberOfThreads;
@@ -445,7 +579,7 @@ public class Main extends App {
             newSnapshotAvailable.set(true);
         });
 
-        if (mouseX == 0 && mouseY == 0 && (!showGui.get() || traces)) {
+        if (mouseX == 0 && mouseY == 0 && !showGui.get()) {
             showGui.set(true);
             traces = false;
 
@@ -763,7 +897,6 @@ public class Main extends App {
                     ImGui.tableNextRow();
                     ImGui.endTable();
                 }
-                ImGui.popItemWidth();
 
                 ImGui.indent();
                 if (cursorActions1.getActive() == CursorAction.BRUSH || cursorActions2.getActive() == CursorAction.BRUSH) {
@@ -776,6 +909,8 @@ public class Main extends App {
                     ImGuiUtils.helpMarker("Number of particles added per frame.");
                 }
                 ImGui.unindent();
+
+                ImGui.popItemWidth();
             }
             ImGui.end();
 
@@ -808,7 +943,7 @@ public class Main extends App {
                     ImGuiUtils.helpMarker("[shift+scroll] How large the particles are displayed." +
                             "\nIf fixed is checked, the size is fixed regardless of zoom.");
 
-                    if (ImGui.checkbox("Clear Screen [c]", traces)) {
+                    if (ImGui.checkbox("Traces [c]", traces)) {
                         traces ^= true;
                     }
 
@@ -996,35 +1131,63 @@ public class Main extends App {
 
         if (requestedSaveImage) {
 
-            // set shader variables
-            String defaultShaderName = "default";
-            if (shaders.hasName(defaultShaderName)) {
-                particleRenderer.particleShader = shaders.get(shaders.getIndexByName(defaultShaderName)).object;
-            }
-            particleRenderer.particleShader.use();
-            particleRenderer.particleShader.setTime(0);
-            particleRenderer.particleShader.setPalette(getColorsFromPalette(
-                    settings.matrix.size(),
-                    new SimpleRainbowPalette()));
-            Matrix4d transform = new Matrix4d();
-            setTransform(transform, SAVE_IMAGE_SIZE, SAVE_IMAGE_SIZE, new Vector2d(0.5, 0.5), 1.0);
-            particleRenderer.particleShader.setTransform(transform);
-            particleRenderer.particleShader.setSize(4f / SAVE_IMAGE_SIZE);
-            particleRenderer.particleShader.setDetail(ParticleShader.MIN_DETAIL);
-
-            saveImage = particleRenderer.renderParticlesToImage(SAVE_IMAGE_SIZE, SAVE_IMAGE_SIZE);
-            requestedSaveImage = false;
+            saveImage = renderParticlesToImage();
 
             final File selectedFile = selectedSaveFile;
             loop.enqueue(() -> {
                 selectedFile.getParentFile().mkdirs();
                 saveState(selectedFile);
             });
+
+            requestedSaveImage = false;
         }
 
         if (requestedSaveCardsLoading.getAndSet(false)) {
             loadSaveCards();
         }
+    }
+
+    private int[] renderParticlesToImage() {
+
+        // get shader
+        ParticleShader particleShader;
+        String defaultShaderName = "default";
+        if (shaders.hasName(defaultShaderName)) {
+            particleShader = shaders.get(shaders.getIndexByName(defaultShaderName)).object;
+        } else {
+            particleShader = shaders.getActive();
+        }
+
+        // set shader variables
+        particleShader.use();
+        particleShader.setTime(0);
+        particleShader.setPalette(getColorsFromPalette(
+                settings.matrix.size(),
+                new SimpleRainbowPalette()));
+        Matrix4d transform = new Matrix4d();
+        new Coordinates((float) SAVE_IMAGE_SIZE, (float) SAVE_IMAGE_SIZE, new Vector2d(0.5, 0.5), 1.0).apply(transform);
+        particleShader.setTransform(transform);
+        particleShader.setSize(4f / SAVE_IMAGE_SIZE);
+        particleShader.setCamTopLeft(0, 0);
+        particleShader.setWrap(false);
+
+        int[] pixels = new int[SAVE_IMAGE_SIZE * SAVE_IMAGE_SIZE];
+        MultisampledFramebuffer tex = new MultisampledFramebuffer();
+        tex.init();
+        tex.ensureSize(SAVE_IMAGE_SIZE, SAVE_IMAGE_SIZE);
+        tex.clear(0, 0, 0, 0);
+        glViewport(0, 0, SAVE_IMAGE_SIZE, SAVE_IMAGE_SIZE);
+        glBindFramebuffer(GL_FRAMEBUFFER, tex.framebufferMulti);
+        particleRenderer.drawParticles();
+        tex.toSingleSampled();
+        glBindFramebuffer(GL_FRAMEBUFFER, tex.framebufferSingle);
+        glReadPixels(0, 0, SAVE_IMAGE_SIZE, SAVE_IMAGE_SIZE, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+
+        // unbind, delete
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        tex.delete();
+
+        return pixels;
     }
 
     private void buildMainMenu() {
@@ -1206,12 +1369,6 @@ public class Main extends App {
         return colors;
     }
 
-    private void setTransform(Matrix4d targetMatrix,
-                              float width, float height, Vector2d camPos, double camSize) {
-        targetMatrix.identity();
-        new Coordinates(width, height, camPos, camSize).apply(targetMatrix);
-    }
-
     @Override
     protected void onKeyPressed(String keyName) {
         // update key states
@@ -1224,6 +1381,8 @@ public class Main extends App {
             case "RIGHT_SHIFT" -> rightShiftPressed = true;
             case "LEFT_CONTROL" -> leftControlPressed = true;
             case "RIGHT_CONTROL" -> rightControlPressed = true;
+            case "LEFT_ALT" -> leftAltPressed = true;
+            case "RIGHT_ALT" -> rightAltPressed = true;
         }
 
         // ctrl + key shortcuts
@@ -1244,14 +1403,8 @@ public class Main extends App {
 
         // simple key shortcuts
         switch (keyName) {
-            case "ESCAPE" -> {
-                if (traces) {
-                    traces = false;
-                    showGui.set(true);
-                } else {
-                    showGui.set(!showGui.get());
-                }
-            }
+            case "ESCAPE" -> showGui.set(!showGui.get());
+            case "f" -> setFullscreen(!isFullscreen());
             case "c" -> traces ^= true;
             case "l" -> palettes.stepForward();
             case "L" -> palettes.stepBackward();
@@ -1319,6 +1472,8 @@ public class Main extends App {
             case "RIGHT_SHIFT" -> rightShiftPressed = false;
             case "LEFT_CONTROL" -> leftControlPressed = false;
             case "RIGHT_CONTROL" -> rightControlPressed = false;
+            case "LEFT_ALT" -> leftAltPressed = false;
+            case "RIGHT_ALT" -> rightAltPressed = false;
         }
     }
 
@@ -1349,9 +1504,9 @@ public class Main extends App {
 
         boolean controlPressed = leftControlPressed || rightControlPressed;
         boolean shiftPressed = leftShiftPressed || rightShiftPressed;
-        boolean bothPressed = controlPressed && shiftPressed;
+        boolean altPressed = leftAltPressed || rightAltPressed;
 
-        if (bothPressed) {
+        if (controlPressed && shiftPressed) {
             // change time step
             appSettings.dt *= Math.pow(1.2, -y);
             appSettings.dt = MathUtils.clamp(appSettings.dt, 0.00f, 0.1f);
@@ -1363,6 +1518,9 @@ public class Main extends App {
         } else if (controlPressed) {
             // change cursor size
             cursor.size *= Math.pow(1.2, -y);
+        } else if (altPressed) {
+            // change rmax
+            loop.enqueue(() -> physics.settings.rmax *= Math.pow(1.2, -y));
         } else {
             // change camera zoom
 

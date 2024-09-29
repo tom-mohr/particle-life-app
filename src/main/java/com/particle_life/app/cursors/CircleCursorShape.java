@@ -42,6 +42,7 @@ public class CircleCursorShape extends CursorShape {
 
     @Override
     void draw() {
+        glLineWidth(2.0f);
         glBindVertexArray(vertexArray);
         glDrawArrays(GL_LINE_LOOP, 0, NUM_SEGMENTS);
     }

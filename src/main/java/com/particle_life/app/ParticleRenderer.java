@@ -14,8 +14,6 @@ class ParticleRenderer {
     private int vboX;
     private int vboV;
     private int vboT;
-
-    public ParticleShader particleShader = null;
     /**
      * Remember the last buffered size in order to use subBufferData instead of bufferData whenever possible.
      */
@@ -29,7 +27,7 @@ class ParticleRenderer {
         vboT = glGenBuffers();
     }
 
-    void bufferParticleData(double[] x, double[] v, int[] types) {
+    void bufferParticleData(ParticleShader particleShader, double[] x, double[] v, int[] types) {
 
         glBindVertexArray(vao);
 
@@ -93,39 +91,9 @@ class ParticleRenderer {
         }
     }
 
-    void renderParticles(int viewportWidth, int viewportHeight) {
-        if (particleShader == null || lastBufferedSize <= 0) return;
-
-        glDisable(GL_SCISSOR_TEST);
-        glViewport(0, 0, viewportWidth, viewportHeight);
-        particleShader.use();
+    void drawParticles() {
+        if (lastBufferedSize <= 0) return;
         glBindVertexArray(vao);
         glDrawArrays(GL_POINTS, 0, lastBufferedSize);
-    }
-
-    int[] renderParticlesToImage(int width, int height) {
-        int[] pixels = new int[width * height];
-
-        // create, bind
-        int framebuffer = glGenFramebuffers();
-        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-
-        int texture = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, texture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-            throw new RuntimeException("Framebuffer is not complete");
-        }
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear the framebuffer
-        renderParticles(width, height);
-        glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-
-        // unbind, delete
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glDeleteFramebuffers(framebuffer);
-
-        return pixels;
     }
 }
