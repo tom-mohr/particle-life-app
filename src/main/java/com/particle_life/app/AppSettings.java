@@ -23,7 +23,7 @@ public class AppSettings extends TomlFile {
     @TomlKey("zoom_step_factor")
     public double zoomStepFactor = 1.2;
     @TomlKey("particle_size")
-    public float particleSize = 4.0f;   // particle size on screen (in pixels)
+    public float particleSize = 0.015f;   // particle size (relative to rmax)
     @TomlKey("particle_size_independent")
     public boolean keepParticleSizeIndependentOfZoom = false;
     @TomlKey("shift_smoothness")

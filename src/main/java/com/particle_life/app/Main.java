@@ -349,7 +349,7 @@ public class Main extends App {
                         new Vector2d(texCamSize.x / 2, texCamSize.y / 2), camSize).apply(transform);
             }
 
-            worldTexture.ensureSize(texWidth, texHeight);
+            worldTexture.ensureSize(texWidth, texHeight, 16);
 
             ParticleShader particleShader = shaders.getActive();
 
@@ -373,9 +373,8 @@ public class Main extends App {
                 particleShader.setCamTopLeft((float) camLeft, (float) camTop);
             }
             particleShader.setWrap(settings.wrap);
-            particleShader.setSize(appSettings.particleSize
-                    * (appSettings.keepParticleSizeIndependentOfZoom ? (float) camSize : 1)
-                    / Math.min(width, height));
+            particleShader.setSize(appSettings.particleSize * 2 * (float) settings.rmax
+                    * (appSettings.keepParticleSizeIndependentOfZoom ? (float) camSize : 1));
 
             if (!traces) worldTexture.clear(0, 0, 0, 0);
 
@@ -395,7 +394,7 @@ public class Main extends App {
             glBindTexture(GL_TEXTURE_2D, 0);
 
             // render cursor onto separate framebuffer
-            cursorTexture.ensureSize(width, height);
+            cursorTexture.ensureSize(width, height, 16);
             cursorTexture.clear(0, 0, 0, 0);
             if (appSettings.showCursor) {
                 new Coordinates((float) width, (float) height, camPos, camSize).apply(transform);
@@ -930,7 +929,7 @@ public class Main extends App {
 
                     ImGui.text("Particle Size:");
                     float[] particleSizeSliderValue = new float[]{appSettings.particleSize};
-                    if (ImGui.sliderFloat("##particle size", particleSizeSliderValue, 0.1f, 10f)) {
+                    if (ImGui.sliderFloat("##particle size", particleSizeSliderValue, 0.001f, 1f)) {
                         appSettings.particleSize = particleSizeSliderValue[0];
                     }
                     ImGui.sameLine();
@@ -1156,14 +1155,14 @@ public class Main extends App {
         Matrix4d transform = new Matrix4d();
         new Coordinates((float) SAVE_IMAGE_SIZE, (float) SAVE_IMAGE_SIZE, new Vector2d(0.5, 0.5), 1.0).apply(transform);
         particleShader.setTransform(transform);
-        particleShader.setSize(4f / SAVE_IMAGE_SIZE);
+        particleShader.setSize(0.015f);
         particleShader.setCamTopLeft(0, 0);
         particleShader.setWrap(false);
 
         int[] pixels = new int[SAVE_IMAGE_SIZE * SAVE_IMAGE_SIZE];
         MultisampledFramebuffer tex = new MultisampledFramebuffer();
         tex.init();
-        tex.ensureSize(SAVE_IMAGE_SIZE, SAVE_IMAGE_SIZE);
+        tex.ensureSize(SAVE_IMAGE_SIZE, SAVE_IMAGE_SIZE, 16);
         tex.clear(0, 0, 0, 0);
         glViewport(0, 0, SAVE_IMAGE_SIZE, SAVE_IMAGE_SIZE);
         glBindFramebuffer(GL_FRAMEBUFFER, tex.framebufferMulti);

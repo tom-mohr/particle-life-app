@@ -19,6 +19,7 @@ public class MultisampledFramebuffer {
 
     public int width = -1;
     public int height = -1;
+    public int samples = -1;
 
     public void init() {
         framebufferMulti = glGenFramebuffers();
@@ -48,11 +49,11 @@ public class MultisampledFramebuffer {
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     }
 
-    public void ensureSize(int width, int height) {
-        if (this.width != width || this.height != height) {
+    public void ensureSize(int width, int height, int samples) {
+        if (this.width != width || this.height != height || this.samples != samples) {
 
             glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureMulti);
-            glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 16, GL_RGBA, width, height, true);
+            glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, samples, GL_RGBA, width, height, true);
             glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
 
             glBindTexture(GL_TEXTURE_2D, textureSingle);
@@ -68,6 +69,7 @@ public class MultisampledFramebuffer {
 
             this.width = width;
             this.height = height;
+            this.samples = samples;
         }
     }
 
