@@ -72,7 +72,6 @@ public class Main extends App {
     private final Clock renderClock = new Clock(60);
     private SelectionManager<ParticleShader> shaders;
     private SelectionManager<Palette> palettes;
-    private SelectionManager<Accelerator> accelerators;
     private SelectionManager<MatrixGenerator> matrixGenerators;
     private SelectionManager<PositionSetter> positionSetters;
     private SelectionManager<TypeSetter> typeSetters;
@@ -177,7 +176,6 @@ public class Main extends App {
         try {
             shaders = new SelectionManager<>(new ShaderProvider());
             palettes = new SelectionManager<>(new PalettesProvider());
-            accelerators = new SelectionManager<>(new AcceleratorProvider());
             matrixGenerators = new SelectionManager<>(new MatrixGeneratorProvider());
             positionSetters = new SelectionManager<>(new PositionSetterProvider());
             typeSetters = new SelectionManager<>(new TypeSetterProvider());
@@ -228,8 +226,14 @@ public class Main extends App {
     }
 
     private void createPhysics() {
+        Accelerator accelerator = (a, pos) -> {
+            double beta = 0.3;
+            double dist = pos.length();
+            double force = dist < beta ? (dist / beta - 1) : a * (1 - Math.abs(1 + beta - 2 * dist) / (1 - beta));
+            return pos.mul(force / dist);
+        };
         physics = new ExtendedPhysics(
-                accelerators.getActive(),
+                accelerator,
                 positionSetters.getActive(),
                 matrixGenerators.getActive(),
                 typeSetters.getActive());
@@ -780,17 +784,6 @@ public class Main extends App {
                     ImGui.text("");
                 }
 
-                // ACCELERATORS
-                if (ImGuiUtils.renderCombo("Accelerator##accelerator", accelerators)) {
-                    final Accelerator nextAccelerator = accelerators.getActive();
-                    loop.enqueue(() -> physics.accelerator = nextAccelerator);
-                }
-                String acceleratorDescription = accelerators.getActiveDescription();
-                if (!acceleratorDescription.isEmpty()) {
-                    ImGuiUtils.helpMarker(acceleratorDescription);
-                }
-                ImGuiUtils.helpMarker("[v] Use this to set how the particles interact with one another");
-
                 // SliderFloat Block
                 ImGuiUtils.numberInput("rmax",
                         0.005f, 1f,
@@ -1031,7 +1024,6 @@ public class Main extends App {
                 ImGui.text("""
                         [l]/[L]: change palette
                         [s]/[S]: change shader
-                        [a]/[A]: change accelerator
                         [x]/[X]: change position setter
                         [r]/[R]: change matrix generator
                         
@@ -1427,16 +1419,6 @@ public class Main extends App {
             case "m" -> loop.enqueue(physics::generateMatrix);
             case "w" -> loop.enqueue(() -> physics.settings.wrap ^= true);
             case " " -> loop.pause ^= true;
-            case "a" -> {
-                accelerators.stepForward();
-                final Accelerator nextAccelerator = accelerators.getActive();
-                loop.enqueue(() -> physics.accelerator = nextAccelerator);
-            }
-            case "A" -> {
-                accelerators.stepBackward();
-                final Accelerator nextAccelerator = accelerators.getActive();
-                loop.enqueue(() -> physics.accelerator = nextAccelerator);
-            }
             case "x" -> {
                 positionSetters.stepForward();
                 final PositionSetter nextPositionSetter = positionSetters.getActive();
