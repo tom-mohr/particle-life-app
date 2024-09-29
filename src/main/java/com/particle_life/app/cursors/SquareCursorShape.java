@@ -16,10 +16,10 @@ public class SquareCursorShape extends CursorShape {
     @Override
     public void onInitialize() {
         final float[] vertexData = new float[]{
-                -1, -1,
-                1, -1,
-                1, 1,
-                -1, 1,
+                -.5f, -.5f,
+                .5f, -.5f,
+                .5f, .5f,
+                -.5f, .5f,
         };
 
         int vertexBuffer = glGenBuffers();
@@ -35,7 +35,7 @@ public class SquareCursorShape extends CursorShape {
     @Override
     boolean isInside(Vector3d connection) {
         Vector3d diff = connection.absolute();
-        return diff.x <= 1.0 && diff.y <= 1.0;
+        return diff.x <= .5 && diff.y <= .5;
     }
 
     @Override
@@ -47,6 +47,6 @@ public class SquareCursorShape extends CursorShape {
 
     @Override
     Vector3d sampleRandomPoint() {
-        return new Vector3d(2 * Math.random() - 1, 2 * Math.random() - 1, 0);
+        return new Vector3d(Math.random() - .5, Math.random() - .5, 0);
     }
 }

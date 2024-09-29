@@ -19,8 +19,8 @@ public class CircleCursorShape extends CursorShape {
         final float[] vertexData = new float[NUM_SEGMENTS * 2];
         for (int i = 0; i < NUM_SEGMENTS; i++) {
             double angle = 2 * Math.PI * i / (float) NUM_SEGMENTS;
-            double x = Math.cos(angle);
-            double y = Math.sin(angle);
+            double x = 0.5 * Math.cos(angle);
+            double y = 0.5 * Math.sin(angle);
             vertexData[2 * i] = (float) x;
             vertexData[2 * i + 1] = (float) y;
         }
@@ -37,7 +37,7 @@ public class CircleCursorShape extends CursorShape {
 
     @Override
     boolean isInside(Vector3d connection) {
-        return connection.length() <= 1.0;
+        return connection.length() <= .5;
     }
 
     @Override
@@ -50,7 +50,7 @@ public class CircleCursorShape extends CursorShape {
     @Override
     Vector3d sampleRandomPoint() {
         double angle = Math.random() * 2 * Math.PI;
-        return new Vector3d(Math.cos(angle), Math.sin(angle), 0)
+        return new Vector3d(0.5 * Math.cos(angle), 0.5 * Math.sin(angle), 0)
                 .mul(Math.sqrt(Math.random()));
     }
 }
