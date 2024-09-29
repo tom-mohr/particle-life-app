@@ -120,6 +120,10 @@ public class Main extends App {
     boolean rightPressed = false;
     boolean upPressed = false;
     boolean downPressed = false;
+    boolean wPressed = false;
+    boolean aPressed = false;
+    boolean sPressed = false;
+    boolean dPressed = false;
     boolean leftShiftPressed = false;
     boolean rightShiftPressed = false;
     boolean leftControlPressed = false;
@@ -464,10 +468,10 @@ public class Main extends App {
 
         double camMovementStepSize = appSettings.camMovementSpeed * camSize;
         camMovementStepSize *= renderClock.getDtMillis() / 1000.0;  // keep constant speed regardless of framerate
-        if (leftPressed) camPosGoal.add(-camMovementStepSize, 0.0);
-        if (rightPressed) camPosGoal.add(camMovementStepSize, 0.0);
-        if (upPressed) camPosGoal.add(0.0, -camMovementStepSize);
-        if (downPressed) camPosGoal.add(0.0, camMovementStepSize);
+        if (leftPressed || aPressed) camPosGoal.add(-camMovementStepSize, 0.0);
+        if (rightPressed || dPressed) camPosGoal.add(camMovementStepSize, 0.0);
+        if (upPressed || wPressed) camPosGoal.add(0.0, -camMovementStepSize);
+        if (downPressed || sPressed) camPosGoal.add(0.0, camMovementStepSize);
 
         camPos.lerp(camPosGoal, appSettings.shiftSmoothness);
         camSize = MathUtils.lerp(camSize, camSizeGoal, appSettings.zoomSmoothness);
@@ -708,9 +712,9 @@ public class Main extends App {
                 ImGuiUtils.separator();
 
                 // TYPE SETTERS
-                ImGuiUtils.renderCombo("##types", typeSetters);
+                ImGuiUtils.renderCombo("##colors", typeSetters);
                 ImGui.sameLine();
-                if (ImGui.button("Types")) {
+                if (ImGui.button("Colors")) {
                     loop.enqueue(() -> {
                         TypeSetter previousTypeSetter = physics.typeSetter;
                         physics.typeSetter = typeSetters.getActive();
@@ -718,11 +722,11 @@ public class Main extends App {
                         physics.typeSetter = previousTypeSetter;
                     });
                 }
-                ImGuiUtils.helpMarker("[t] Use this to set types of particles without changing their position.");
+                ImGuiUtils.helpMarker("[c] Use this to set colors of particles without changing their position.");
 
                 // NTYPES
                 ImInt matrixSizeInput = new ImInt(settings.matrix.size());
-                if (ImGui.inputInt("Types##input", matrixSizeInput, 1, 1, ImGuiInputTextFlags.EnterReturnsTrue)) {
+                if (ImGui.inputInt("Colors##input", matrixSizeInput, 1, 1, ImGuiInputTextFlags.EnterReturnsTrue)) {
                     final int newSize = Math.max(1, Math.min(matrixSizeInput.get(), 256));
                     loop.enqueue(() -> physics.setMatrixSize(newSize));
                 }
@@ -741,10 +745,10 @@ public class Main extends App {
                 if (ImGui.button("Equalize")) {
                     loop.enqueue(() -> physics.setTypeCountEqual());
                 }
-                if (ImGui.treeNode("Settings##typebars")) {
+                if (ImGui.treeNode("Settings##colorbars")) {
                     {
                         ImInt inputValue = new ImInt(typeCountDiagramStepSize);
-                        if (ImGui.inputInt("Step Size##TypeCount", inputValue, 10)) {
+                        if (ImGui.inputInt("Step Size##ColorCount", inputValue, 10)) {
                             typeCountDiagramStepSize = Math.max(0, inputValue.get());
                         }
                     }
@@ -814,7 +818,7 @@ public class Main extends App {
                     final boolean newWrap = !settings.wrap;
                     loop.enqueue(() -> physics.settings.wrap = newWrap);
                 }
-                ImGuiUtils.helpMarker("[w] Determines if the space wraps around at the borders or not.");
+                ImGuiUtils.helpMarker("[b] Determines if the space wraps around at the borders or not.");
 
                 if (appSettings.autoDt) ImGui.beginDisabled();
                 ImGuiUtils.numberInput(
@@ -918,11 +922,11 @@ public class Main extends App {
 
                     // SHADERS
                     ImGuiUtils.renderCombo("Shader", shaders);
-                    ImGuiUtils.helpMarker("[s] Use this to set how the particles are displayed");
+                    ImGuiUtils.helpMarker("Use this to set how the particles are displayed");
 
                     // PALETTES
                     ImGuiUtils.renderCombo("Palette", palettes);
-                    ImGuiUtils.helpMarker("[l] Color of particles");
+                    ImGuiUtils.helpMarker("Color of particles");
 
                     ImGui.text("Particle Size:");
                     float[] particleSizeSliderValue = new float[]{appSettings.particleSize};
@@ -936,7 +940,7 @@ public class Main extends App {
                     ImGuiUtils.helpMarker("[shift+scroll] How large the particles are displayed." +
                             "\nIf fixed is checked, the size is fixed regardless of zoom.");
 
-                    if (ImGui.checkbox("Traces [c]", traces)) {
+                    if (ImGui.checkbox("Traces [t]", traces)) {
                         traces ^= true;
                     }
 
@@ -1022,29 +1026,19 @@ public class Main extends App {
             ImGui.setNextWindowPos(width / 2f, height / 2f, ImGuiCond.FirstUseEver, 0.5f, 0.5f);
             if (ImGui.begin("Controls", showControlsWindow, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoResize)) {
                 ImGui.text("""
-                        [l]/[L]: change palette
-                        [s]/[S]: change shader
-                        [x]/[X]: change position setter
-                        [r]/[R]: change matrix generator
-                        
-                        [p]: set positions
-                        [t]: set types
-                        [m]: set matrix
-                        
-                        [w]: toggle space wrapping
-                        
-                        [SPACE]: pause physics
-                        
-                        [F11]: toggle full screen
-                        [ALT]+[F4]: quit
-                        
-                        [+]/[=]: zoom in
+                        [+], [=]: zoom in
                         [-]: zoom out
                         [z]: reset zoom
                         [Z]: reset zoom (fit window)
-                        
-                        [c]: toggle traces (clear screen)
                         [ESCAPE]: hide GUI / show GUI
+                        [SPACE]: pause physics
+                        [p]: set positions
+                        [c]: set colors
+                        [m]: set matrix
+                        [b]: toggle boundaries (clamped / periodic)
+                        [t]: toggle traces
+                        [F11], [f]: toggle full screen
+                        [ALT]+[F4], [q]: quit
                         """);
             }
             ImGui.end();
@@ -1369,6 +1363,10 @@ public class Main extends App {
             case "RIGHT" -> rightPressed = true;
             case "UP" -> upPressed = true;
             case "DOWN" -> downPressed = true;
+            case "w" -> wPressed = true;
+            case "a" -> aPressed = true;
+            case "s" -> sPressed = true;
+            case "d" -> dPressed = true;
             case "LEFT_SHIFT" -> leftShiftPressed = true;
             case "RIGHT_SHIFT" -> rightShiftPressed = true;
             case "LEFT_CONTROL" -> leftControlPressed = true;
@@ -1397,11 +1395,7 @@ public class Main extends App {
         switch (keyName) {
             case "ESCAPE" -> showGui.set(!showGui.get());
             case "f" -> setFullscreen(!isFullscreen());
-            case "c" -> traces ^= true;
-            case "l" -> palettes.stepForward();
-            case "L" -> palettes.stepBackward();
-            case "s" -> shaders.stepForward();
-            case "S" -> shaders.stepBackward();
+            case "t" -> traces ^= true;
             case "+", "=" -> camSizeGoal /= Math.pow(appSettings.zoomStepFactor, 2);// more steps than when scrolling
             case "-" -> {
                 camSizeGoal *= Math.pow(appSettings.zoomStepFactor, 2);
@@ -1410,35 +1404,15 @@ public class Main extends App {
             case "z" -> resetCamera(true, false);
             case "Z" -> resetCamera(true, true);
             case "p" -> loop.enqueue(physics::setPositions);
-            case "t" -> loop.enqueue(() -> {
+            case "c" -> loop.enqueue(() -> {
                 TypeSetter previousTypeSetter = physics.typeSetter;
                 physics.typeSetter = typeSetters.getActive();
                 physics.setTypes();
                 physics.typeSetter = previousTypeSetter;
             });
             case "m" -> loop.enqueue(physics::generateMatrix);
-            case "w" -> loop.enqueue(() -> physics.settings.wrap ^= true);
+            case "b" -> loop.enqueue(() -> physics.settings.wrap ^= true);
             case " " -> loop.pause ^= true;
-            case "x" -> {
-                positionSetters.stepForward();
-                final PositionSetter nextPositionSetter = positionSetters.getActive();
-                loop.enqueue(() -> physics.positionSetter = nextPositionSetter);
-            }
-            case "X" -> {
-                positionSetters.stepBackward();
-                final PositionSetter nextPositionSetter = positionSetters.getActive();
-                loop.enqueue(() -> physics.positionSetter = nextPositionSetter);
-            }
-            case "r" -> {
-                matrixGenerators.stepForward();
-                final MatrixGenerator nextMatrixGenerator = matrixGenerators.getActive();
-                loop.enqueue(() -> physics.matrixGenerator = nextMatrixGenerator);
-            }
-            case "R" -> {
-                matrixGenerators.stepBackward();
-                final MatrixGenerator nextMatrixGenerator = matrixGenerators.getActive();
-                loop.enqueue(() -> physics.matrixGenerator = nextMatrixGenerator);
-            }
         }
     }
 
@@ -1450,6 +1424,10 @@ public class Main extends App {
             case "RIGHT" -> rightPressed = false;
             case "UP" -> upPressed = false;
             case "DOWN" -> downPressed = false;
+            case "w" -> wPressed = false;
+            case "a" -> aPressed = false;
+            case "s" -> sPressed = false;
+            case "d" -> dPressed = false;
             case "LEFT_SHIFT" -> leftShiftPressed = false;
             case "RIGHT_SHIFT" -> rightShiftPressed = false;
             case "LEFT_CONTROL" -> leftControlPressed = false;

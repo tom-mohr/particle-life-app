@@ -31,7 +31,7 @@ public class ParticlesIO {
     public static void saveParticles(Particle[] particles, OutputStream out) throws IOException {
         try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
             try (PrintWriter writer = new PrintWriter(byteStream)) {
-                writer.println("x\ty\tvx\tvy\ttype");
+                writer.println("x\ty\tvx\tvy\tcolor");
                 for (Particle particle : particles) {
                     writer.println(particle.position.x + "\t"
                             + particle.position.y + "\t"
