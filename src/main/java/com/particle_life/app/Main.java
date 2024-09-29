@@ -383,6 +383,7 @@ public class Main extends App {
 //            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_COLOR);  // subtractive
 //            glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_COLOR);  // screen
 
+            glDisable(GL_SCISSOR_TEST);
             glViewport(0, 0, texWidth, texHeight);
 
             glBindFramebuffer(GL_FRAMEBUFFER, worldTexture.framebufferMulti);
