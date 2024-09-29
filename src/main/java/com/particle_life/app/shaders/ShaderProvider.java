@@ -23,6 +23,7 @@ public class ShaderProvider implements InfoWrapperProvider<ParticleShader> {
         public String vertex = "default.vert";
         public String geometry = "default.geom";
         public String fragment = "default.geom";
+        public BlendMode blend = BlendMode.normal;
     }
 
     @Override
@@ -77,7 +78,8 @@ public class ShaderProvider implements InfoWrapperProvider<ParticleShader> {
                                 new ParticleShader(
                                         "shaders/" + config.vertex,
                                         "shaders/" + config.geometry,
-                                        "shaders/" + config.fragment
+                                        "shaders/" + config.fragment,
+                                        config.blend
                                 )
                         );
                     } catch (IOException e) {

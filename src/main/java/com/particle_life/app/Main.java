@@ -378,10 +378,7 @@ public class Main extends App {
             if (!traces) worldTexture.clear(0, 0, 0, 0);
 
             glEnable(GL_BLEND);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  // alpha blending
-//            glBlendFunc(GL_SRC_ALPHA, GL_ONE);  // additive
-//            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_COLOR);  // subtractive
-//            glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_COLOR);  // screen
+            particleShader.blendMode.glBlendFunc();
 
             glDisable(GL_SCISSOR_TEST);
             glViewport(0, 0, texWidth, texHeight);
@@ -1144,6 +1141,9 @@ public class Main extends App {
         } else {
             particleShader = shaders.getActive();
         }
+
+        glEnable(GL_BLEND);
+        particleShader.blendMode.glBlendFunc();
 
         // set shader variables
         particleShader.use();
