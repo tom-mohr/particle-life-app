@@ -423,7 +423,7 @@ public class Main extends App {
             ImGui.getBackgroundDrawList().addImage(cursorTexture.textureSingle, 0, 0, width, height,
                     0, 0, 1, 1);
 
-            if (showGui.get()) buildGui();
+            buildGui();
             ImGui.render();
 
             glDisable(GL_SCISSOR_TEST);
