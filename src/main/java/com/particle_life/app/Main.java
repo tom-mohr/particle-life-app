@@ -928,16 +928,16 @@ public class Main extends App {
                     ImGuiUtils.helpMarker("Color of particles");
 
                     ImGui.text("Particle Size:");
+                    ImGuiUtils.helpMarker("[shift+scroll]" +
+                            "\nHow large the particles are displayed relative to rmax.");
                     float[] particleSizeSliderValue = new float[]{appSettings.particleSize};
                     if (ImGui.sliderFloat("##particle size", particleSizeSliderValue, 0.001f, 1f)) {
                         appSettings.particleSize = particleSizeSliderValue[0];
                     }
                     ImGui.sameLine();
-                    if (ImGui.checkbox("Fixed", appSettings.keepParticleSizeIndependentOfZoom)) {
+                    if (ImGui.checkbox("Zoom-Independent", appSettings.keepParticleSizeIndependentOfZoom)) {
                         appSettings.keepParticleSizeIndependentOfZoom ^= true;
                     }
-                    ImGuiUtils.helpMarker("[shift+scroll] How large the particles are displayed." +
-                            "\nIf fixed is checked, the size is fixed regardless of zoom.");
 
                     if (ImGui.checkbox("Traces [t]", traces)) {
                         traces ^= true;
@@ -1029,7 +1029,8 @@ public class Main extends App {
                         [-]: zoom out
                         [z]: reset zoom
                         [Z]: reset zoom (fit window)
-                        [ESCAPE]: hide GUI / show GUI
+                        [ESCAPE]: hide / show GUI GUI
+                        [g]: show / hide graphics settings
                         [SPACE]: pause physics
                         [p]: set positions
                         [c]: set colors
@@ -1194,7 +1195,7 @@ public class Main extends App {
                 showAboutWindow.set(true);
             }
 
-            if (ImGui.menuItem("Quit", "Alt+F4")) {
+            if (ImGui.menuItem("Quit", "Alt+F4, q")) {
                 close();
             }
 
@@ -1204,11 +1205,11 @@ public class Main extends App {
         if (ImGui.beginMenu("View")) {
 
             if (isFullscreen()) {
-                if (ImGui.menuItem("Exit Fullscreen", "F11")) {
+                if (ImGui.menuItem("Exit Fullscreen", "F11, f")) {
                     setFullscreen(false);
                 }
             } else {
-                if (ImGui.menuItem("Fullscreen", "F11")) {
+                if (ImGui.menuItem("Fullscreen", "F11, f")) {
                     setFullscreen(true);
                 }
             }
@@ -1227,7 +1228,7 @@ public class Main extends App {
                 ImGui.endMenu();
             }
 
-            if (ImGui.menuItem("Graphics..")) {
+            if (ImGui.menuItem("Graphics..", "g")) {
                 showGraphicsWindow.set(true);
             }
 
@@ -1413,9 +1414,11 @@ public class Main extends App {
                 physics.setTypes();
                 physics.typeSetter = previousTypeSetter;
             });
+            case "g" -> showGraphicsWindow.set(!showGraphicsWindow.get());
             case "m" -> loop.enqueue(physics::generateMatrix);
             case "b" -> loop.enqueue(() -> physics.settings.wrap ^= true);
             case " " -> loop.pause ^= true;
+            case "q" -> close();
         }
     }
 
