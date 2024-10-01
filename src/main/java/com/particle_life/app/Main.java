@@ -13,9 +13,7 @@ import com.particle_life.app.selection.SelectionManager;
 import com.particle_life.app.shaders.CursorShader;
 import com.particle_life.app.shaders.ParticleShader;
 import com.particle_life.app.shaders.ShaderProvider;
-import com.particle_life.app.utils.ImGuiUtils;
-import com.particle_life.app.utils.MathUtils;
-import com.particle_life.app.utils.MultisampledFramebuffer;
+import com.particle_life.app.utils.*;
 import imgui.ImGui;
 import imgui.flag.*;
 import imgui.gl3.ImGuiImplGl3;
@@ -25,6 +23,7 @@ import imgui.type.ImInt;
 import imgui.type.ImString;
 import org.joml.Matrix4d;
 import org.joml.Vector2d;
+import org.joml.Vector3d;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -297,30 +296,6 @@ public class Main extends App {
         imGuiGl3.dispose();
     }
 
-    private void ensureTextureDimensions(int target, int textureId, int width, int height) {
-        // bind
-        glBindTexture(target, textureId);
-
-        // query dimensions of texture
-        int[] intBuffer = new int[1];
-        glGetTexLevelParameteriv(target, 0, GL_TEXTURE_WIDTH, intBuffer);
-        int textureWidth = intBuffer[0];
-        glGetTexLevelParameteriv(target, 0, GL_TEXTURE_HEIGHT, intBuffer);
-        int textureHeight = intBuffer[0];
-
-        // set texture dimensions if necessary
-        if (width != textureWidth || height != textureHeight) {
-            if (target == GL_TEXTURE_2D) {
-                glTexImage2D(target, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-            } else if (target == GL_TEXTURE_2D_MULTISAMPLE) {
-                glTexImage2DMultisample(target, 16, GL_RGBA, width, height, true);
-            }
-        }
-
-        // unbind
-        glBindTexture(target, 0);
-    }
-
     @Override
     protected void draw(double dt) {
         if (this.error == null) {
@@ -328,12 +303,16 @@ public class Main extends App {
             updateCanvas();
 
             int texWidth, texHeight;
+
+            // todo: make this part look less like magic
             int desiredTexSize = (int) Math.round(Math.min(width, height) / camSize);
             if (camSize > 1) {
                 texWidth = desiredTexSize;
                 texHeight = desiredTexSize;
-                new Coordinates((float) desiredTexSize, (float) desiredTexSize,
-                        new Vector2d(0.5, 0.5), 1).apply(transform);
+                new NormalizedDeviceCoordinates(
+                        new Vector2d(0.5, 0.5),  // center camera
+                        new Vector2d(1, 1)  // capture whole screen
+                ).getMatrix(transform);
             } else {
                 if (settings.wrap) {
                     texWidth = Math.min(desiredTexSize, width);
@@ -345,8 +324,10 @@ public class Main extends App {
                 Vector2d texCamSize = new Vector2d(camSize);
                 if (width > height) texCamSize.x *= (double) texWidth / texHeight;
                 else if (height > width) texCamSize.y *= (double) texHeight / texWidth;
-                new Coordinates((float) texWidth, (float) texHeight,
-                        new Vector2d(texCamSize.x / 2, texCamSize.y / 2), camSize).apply(transform);
+                new NormalizedDeviceCoordinates(
+                        new Vector2d(texCamSize.x / 2, texCamSize.y / 2),
+                        texCamSize
+                ).getMatrix(transform);
             }
 
             worldTexture.ensureSize(texWidth, texHeight, 16);
@@ -360,17 +341,12 @@ public class Main extends App {
             particleShader.setPalette(getColorsFromPalette(settings.matrix.size(), palettes.getActive()));
             particleShader.setTransform(transform);
 
-            Vector2d extendedCamSize = new Vector2d(camSize, camSize);
-            if (width > height) extendedCamSize.x *= (double) width / height;
-            else if (height > width) extendedCamSize.y *= (double) height / width;
-            double camLeft = camPos.x - extendedCamSize.x / 2;
-            double camTop = camPos.y - extendedCamSize.y / 2;
-            double camRight = camPos.x + extendedCamSize.x / 2;
-            double camBottom = camPos.y + extendedCamSize.y / 2;
+            CamOperations cam = new CamOperations(camPos, camSize, width, height);
+            CamOperations.BoundingBox camBox = cam.getBoundingBox();
             if (camSize > 1) {
                 particleShader.setCamTopLeft(0, 0);
             } else {
-                particleShader.setCamTopLeft((float) camLeft, (float) camTop);
+                particleShader.setCamTopLeft((float) camBox.left, (float) camBox.top);
             }
             particleShader.setWrap(settings.wrap);
             particleShader.setSize(appSettings.particleSize * 2 * (float) settings.rmax
@@ -397,7 +373,10 @@ public class Main extends App {
             cursorTexture.ensureSize(width, height, 16);
             cursorTexture.clear(0, 0, 0, 0);
             if (appSettings.showCursor) {
-                new Coordinates((float) width, (float) height, camPos, camSize).apply(transform);
+                new NormalizedDeviceCoordinates(
+                        camPos,
+                        cam.getCamDimensions()
+                ).getMatrix(transform);
                 transform.translate(cursor.position);
                 transform.scale(cursor.size);
 
@@ -417,8 +396,8 @@ public class Main extends App {
             ImGui.newFrame();
             if (camSize > 1) {
                 ImGui.getBackgroundDrawList().addImage(worldTexture.textureSingle, 0, 0, width, height,
-                        (float) camLeft, (float) camTop,
-                        (float) camRight, (float) camBottom);
+                        (float) camBox.left, (float) camBox.top,
+                        (float) camBox.right, (float) camBox.bottom);
             } else {
                 ImGui.getBackgroundDrawList().addImage(worldTexture.textureSingle, 0, 0, width, height,
                         0, 0, (float) width / texWidth, (float) height / texHeight);
@@ -451,17 +430,14 @@ public class Main extends App {
      */
     private void updateCanvas() {
         // util object for later use
-        Coordinates coordinates = new Coordinates(width, height, camPos, camSize);
+        ScreenCoordinates screen = new ScreenCoordinates(camPos, camSize, width, height);
 
         // set cursor position and size
-        Vector2d cursorWorldCoordinates = coordinates.world(mouseX, mouseY);
-        cursor.position.set(cursorWorldCoordinates, 0);
+        cursor.position.set(screen.screenToWorld(new Vector2d(mouseX, mouseY)));
 
         if (draggingShift) {
-
-            camPos.set(coordinates
-                    .mouseShift(new Vector2d(pmouseX, pmouseY), new Vector2d(mouseX, mouseY))
-                    .camPos);
+            new CamOperations(camPos, camSize, width, height)
+                    .dragCam(new Vector2d(pmouseX, pmouseY), new Vector2d(mouseX, mouseY));
             camPosGoal.set(camPos);  // don't use smoothing while dragging
         }
 
@@ -520,10 +496,10 @@ public class Main extends App {
             SelectionManager<CursorAction> cursorActions = leftDraggingParticles ? cursorActions1 : cursorActions2;
             switch (cursorActions.getActive()) {
                 case MOVE -> {
-                    final Vector2d wPrev = coordinates.world(pmouseX, pmouseY);  // where the dragging started
-                    final Vector2d wNew = coordinates.world(mouseX, mouseY);  // where the dragging ended
-                    final Vector2d delta = wNew.sub(wPrev);  // dragged distance
-                    cursorCopy.position.set(wPrev.x, wPrev.y, 0.0);  // set cursor to start of dragging
+                    final Vector3d dragStartWorld = screen.screenToWorld(pmouseX, pmouseY);  // where the dragging started
+                    final Vector3d dragStopWorld = screen.screenToWorld(mouseX, mouseY);  // where the dragging ended
+                    final Vector3d delta = dragStopWorld.sub(dragStartWorld);  // dragged distance
+                    cursorCopy.position.set(dragStartWorld.x, dragStartWorld.y, 0.0);  // set cursor copy to start of dragging
                     loop.enqueue(() -> {
                         for (Particle p : cursorCopy.getSelection(physics.particles, physics.settings.wrap)) {
                             p.position.add(delta.x, delta.y, 0);
@@ -1153,9 +1129,10 @@ public class Main extends App {
         particleShader.setPalette(getColorsFromPalette(
                 settings.matrix.size(),
                 new SimpleRainbowPalette()));
-        Matrix4d transform = new Matrix4d();
-        new Coordinates((float) SAVE_IMAGE_SIZE, (float) SAVE_IMAGE_SIZE, new Vector2d(0.5, 0.5), 1.0).apply(transform);
-        particleShader.setTransform(transform);
+        particleShader.setTransform(new NormalizedDeviceCoordinates(
+                new Vector2d(0.5, 0.5),  // center camera
+                new Vector2d(1, 1)  // capture whole world
+        ).getMatrix());
         particleShader.setSize(0.015f);
         particleShader.setCamTopLeft(0, 0);
         particleShader.setWrap(false);
@@ -1492,13 +1469,12 @@ public class Main extends App {
 
             double factor = Math.pow(appSettings.zoomStepFactor, -y);
 
-            Coordinates coordinates = new Coordinates(width, height, camPosGoal, camSizeGoal);
-            double newCamSize = camSizeGoal * factor;
-            newCamSize = Math.min(newCamSize, MAX_CAM_SIZE);
-            coordinates.changeCamSizeFixed(coordinates.world(mouseX, mouseY), newCamSize);
-
-            camSizeGoal = coordinates.camSize;
-            camPosGoal.set(coordinates.camPos);
+            CamOperations cam = new CamOperations(camPosGoal, camSizeGoal, width, height);
+            cam.zoom(
+                    mouseX, mouseY, // zoom in on mouse
+                    Math.min(camSizeGoal * factor, MAX_CAM_SIZE)
+            );  // this already modifies camPosGoal
+            camSizeGoal = cam.camSize;
         }
     }
 
