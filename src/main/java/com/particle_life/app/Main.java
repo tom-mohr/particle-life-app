@@ -111,7 +111,7 @@ public class Main extends App {
     private final Vector2d camPosGoal = new Vector2d(camPos);
     private double camSize = 1.0;
     private double camSizeGoal = camSize;
-    private final double MAX_CAM_SIZE = 10;
+    private final double MAX_CAM_SIZE = 20;
     boolean draggingShift = false;
     boolean leftDraggingParticles = false;  // dragging with left mouse button
     boolean rightDraggingParticles = false;  // dragging with right mouse button
@@ -885,70 +885,70 @@ public class Main extends App {
                 ImGui.popItemWidth();
             }
             ImGui.end();
+        }
 
-            // GRAPHICS
-            if (showGraphicsWindow.get()) {
-                ImGui.setNextWindowSize(400, 300);
-                ImGui.setNextWindowPos(width / 2f, height / 2f, ImGuiCond.FirstUseEver, 0.5f, 0.5f);
-                if (ImGui.begin("Graphics", showGraphicsWindow,
-                        ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoNavFocus | ImGuiWindowFlags.NoCollapse)) {
-                    ImGui.pushItemWidth(200);
-                    ImGui.text(String.format("Graphics FPS: %.0f", renderClock.getAvgFramerate()));
+        // GRAPHICS
+        if (showGraphicsWindow.get()) {
+            ImGui.setNextWindowSize(400, 300);
+            ImGui.setNextWindowPos(width / 2f, height / 2f, ImGuiCond.FirstUseEver, 0.5f, 0.5f);
+            if (ImGui.begin("Graphics", showGraphicsWindow,
+                    ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoNavFocus | ImGuiWindowFlags.NoCollapse)) {
+                ImGui.pushItemWidth(200);
+                ImGui.text(String.format("Graphics FPS: %.0f", renderClock.getAvgFramerate()));
 
-                    // SHADERS
-                    ImGuiUtils.renderCombo("Shader", shaders);
-                    ImGuiUtils.helpMarker("Use this to set how the particles are displayed");
+                // SHADERS
+                ImGuiUtils.renderCombo("Shader", shaders);
+                ImGuiUtils.helpMarker("Use this to set how the particles are displayed");
 
-                    // PALETTES
-                    ImGuiUtils.renderCombo("Palette", palettes);
-                    ImGuiUtils.helpMarker("Color of particles");
+                // PALETTES
+                ImGuiUtils.renderCombo("Palette", palettes);
+                ImGuiUtils.helpMarker("Color of particles");
 
-                    ImGui.text("Particle Size:");
-                    ImGuiUtils.helpMarker("[shift+scroll]" +
-                            "\nHow large the particles are displayed relative to rmax.");
-                    float[] particleSizeSliderValue = new float[]{appSettings.particleSize};
-                    if (ImGui.sliderFloat("##particle size", particleSizeSliderValue, 0.001f, 1f)) {
-                        appSettings.particleSize = particleSizeSliderValue[0];
-                    }
-                    ImGui.sameLine();
-                    if (ImGui.checkbox("Zoom-Independent", appSettings.keepParticleSizeIndependentOfZoom)) {
-                        appSettings.keepParticleSizeIndependentOfZoom ^= true;
-                    }
-
-                    if (ImGui.checkbox("Traces [t]", traces)) {
-                        traces ^= true;
-                    }
-
-                    if (ImGui.treeNode("Camera Settings")) {
-                        {
-                            float[] inputValue = new float[]{(float) appSettings.camMovementSpeed};
-                            if (ImGui.sliderFloat("Cam Speed", inputValue, 0.0f, 2.0f, "%0.2f")) {
-                                appSettings.camMovementSpeed = inputValue[0];
-                            }
-                        }
-
-                        {
-                            float[] inputValue = new float[]{(float) (1.0 - appSettings.zoomSmoothness)};
-                            if (ImGui.sliderFloat("Cam Smoothing", inputValue, 0.0f, 1.0f, "%0.2f")) {
-                                appSettings.zoomSmoothness = 1.0 - inputValue[0];
-                                appSettings.shiftSmoothness = 1.0 - inputValue[0];
-                            }
-                        }
-
-                        {
-                            float[] inputValue = new float[]{(float) (appSettings.zoomStepFactor - 1) * 100};
-                            if (ImGui.sliderFloat("Zoom Step", inputValue, 0.0f, 100.0f, "%.1f%%", ImGuiSliderFlags.Logarithmic)) {
-                                appSettings.zoomStepFactor = 1 + inputValue[0] * 0.01;
-                            }
-                        }
-
-                        ImGui.treePop();
-                    }
-
-                    ImGui.popItemWidth();
+                ImGui.text("Particle Size:");
+                ImGuiUtils.helpMarker("[shift+scroll]" +
+                        "\nHow large the particles are displayed relative to rmax.");
+                float[] particleSizeSliderValue = new float[]{appSettings.particleSize};
+                if (ImGui.sliderFloat("##particle size", particleSizeSliderValue, 0.001f, 1f)) {
+                    appSettings.particleSize = particleSizeSliderValue[0];
                 }
-                ImGui.end();
+                ImGui.sameLine();
+                if (ImGui.checkbox("Zoom-Independent", appSettings.keepParticleSizeIndependentOfZoom)) {
+                    appSettings.keepParticleSizeIndependentOfZoom ^= true;
+                }
+
+                if (ImGui.checkbox("Traces [t]", traces)) {
+                    traces ^= true;
+                }
+
+                if (ImGui.treeNode("Camera Settings")) {
+                    {
+                        float[] inputValue = new float[]{(float) appSettings.camMovementSpeed};
+                        if (ImGui.sliderFloat("Cam Speed", inputValue, 0.0f, 2.0f, "%0.2f")) {
+                            appSettings.camMovementSpeed = inputValue[0];
+                        }
+                    }
+
+                    {
+                        float[] inputValue = new float[]{(float) (1.0 - appSettings.zoomSmoothness)};
+                        if (ImGui.sliderFloat("Cam Smoothing", inputValue, 0.0f, 1.0f, "%0.2f")) {
+                            appSettings.zoomSmoothness = 1.0 - inputValue[0];
+                            appSettings.shiftSmoothness = 1.0 - inputValue[0];
+                        }
+                    }
+
+                    {
+                        float[] inputValue = new float[]{(float) (appSettings.zoomStepFactor - 1) * 100};
+                        if (ImGui.sliderFloat("Zoom Step", inputValue, 0.0f, 100.0f, "%.1f%%", ImGuiSliderFlags.Logarithmic)) {
+                            appSettings.zoomStepFactor = 1 + inputValue[0] * 0.01;
+                        }
+                    }
+
+                    ImGui.treePop();
+                }
+
+                ImGui.popItemWidth();
             }
+            ImGui.end();
         }
 
         // PHYSICS NOT REACTING
