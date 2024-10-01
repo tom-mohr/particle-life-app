@@ -45,8 +45,6 @@ import java.util.zip.ZipOutputStream;
 import static org.lwjgl.opengl.GL11C.*;
 import static org.lwjgl.opengl.GL13C.GL_MULTISAMPLE;
 import static org.lwjgl.opengl.GL30C.*;
-import static org.lwjgl.opengl.GL32C.GL_TEXTURE_2D_MULTISAMPLE;
-import static org.lwjgl.opengl.GL32C.glTexImage2DMultisample;
 
 public class Main extends App {
 
@@ -1197,10 +1195,10 @@ public class Main extends App {
 
             if (ImGui.beginMenu("Zoom")) {
                 if (ImGui.menuItem("100%", "z")) {
-                    resetCamera(true, false);
+                    resetCamera(false);
                 }
                 if (ImGui.menuItem("Fit", "Z")) {
-                    resetCamera(true, true);
+                    resetCamera(true);
                 }
                 ImGui.endMenu();
             }
@@ -1316,10 +1314,10 @@ public class Main extends App {
         }
     }
 
-    private void resetCamera(boolean smooth, boolean fit) {
+    private void resetCamera(boolean fit) {
+        if (settings.wrap) camPos.sub(Math.floor(camPos.x), Math.floor(camPos.y));  // remove periodic offset
         camPosGoal.set(0.5, 0.5);  // world center
         camSizeGoal = 1;
-        if (!smooth) camPos.set(0);
 
         if (fit) {
             // zoom to fit larger dimension
@@ -1382,8 +1380,8 @@ public class Main extends App {
                 camSizeGoal *= Math.pow(appSettings.zoomStepFactor, 2);
                 camSizeGoal = Math.min(camSizeGoal, MAX_CAM_SIZE);
             }
-            case "z" -> resetCamera(true, false);
-            case "Z" -> resetCamera(true, true);
+            case "z" -> resetCamera(false);
+            case "Z" -> resetCamera(true);
             case "p" -> loop.enqueue(physics::setPositions);
             case "c" -> loop.enqueue(() -> {
                 TypeSetter previousTypeSetter = physics.typeSetter;
