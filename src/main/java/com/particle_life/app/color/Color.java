@@ -11,6 +11,10 @@ public class Color {
         this.a = a;
     }
 
+    public Color(float r, float g, float b) {
+        this(r, g, b, 1);
+    }
+
     public Color() {
         this(0, 0, 0, 1);
     }

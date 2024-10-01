@@ -45,7 +45,7 @@ public class AppSettings extends TomlFile {
     @TomlKey("matrix_step_size")
     public double matrixGuiStepSize = 0.2;
     @TomlKey("palette")
-    public String palette = "RainbowSmooth12.map";
+    public String palette = "Natural Rainbow.map";
     @TomlKey("shader")
     public String shader = "default";
     @TomlKey("time_step")

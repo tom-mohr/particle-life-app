@@ -19,13 +19,18 @@ public class PalettesProvider implements InfoWrapperProvider<Palette> {
     public List<InfoWrapper<Palette>> create() throws Exception {
         List<InfoWrapper<Palette>> palettes = new ArrayList<>();
 
-        palettes.add(new InfoWrapper<>("Digital Rainbow", new SimpleRainbowPalette()));
-
         try {
             palettes.addAll(loadPalettesFromFiles());
         } catch (IOException | URISyntaxException e) {
             e.printStackTrace();
         }
+
+        // ensure that the default palette is always present, even if the user deletes it
+        if (palettes.stream().noneMatch(p -> p.name.equals("Natural Rainbow.map"))) {
+            palettes.add(new InfoWrapper<>("Natural Rainbow", new NaturalRainbowPalette()));
+        }
+
+        palettes.add(new InfoWrapper<>("Digital Rainbow", new SimpleRainbowPalette()));
 
         return palettes;
     }

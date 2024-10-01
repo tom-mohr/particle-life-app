@@ -1,10 +1,7 @@
 package com.particle_life.app;
 
 import com.particle_life.*;
-import com.particle_life.app.color.Color;
-import com.particle_life.app.color.Palette;
-import com.particle_life.app.color.PalettesProvider;
-import com.particle_life.app.color.SimpleRainbowPalette;
+import com.particle_life.app.color.*;
 import com.particle_life.app.cursors.*;
 import com.particle_life.app.io.MatrixIO;
 import com.particle_life.app.io.ParticlesIO;
@@ -1126,7 +1123,7 @@ public class Main extends App {
         particleShader.setTime(0);
         particleShader.setPalette(getColorsFromPalette(
                 settings.matrix.size(),
-                new SimpleRainbowPalette()));
+                new NaturalRainbowPalette()));
         particleShader.setTransform(new NormalizedDeviceCoordinates(
                 new Vector2d(0.5, 0.5),  // center camera
                 new Vector2d(1, 1)  // capture whole world
