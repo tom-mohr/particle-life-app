@@ -231,6 +231,12 @@ public class Main extends App {
             double force = dist < beta ? (dist / beta - 1) : a * (1 - Math.abs(1 + beta - 2 * dist) / (1 - beta));
             return pos.mul(force / dist);
         };
+//        Accelerator accelerator = (a, pos) -> {
+//            double rmin = 0.3;
+//            double dist = pos.length();
+//            double force = dist < rmin ? (dist / rmin - 1) : a * (1 - Math.abs(1 + rmin - 2 * dist) / (1 - rmin));
+//            return pos.mul(force / (dist * dist));
+//        };
         physics = new ExtendedPhysics(
                 accelerator,
                 positionSetters.getActive(),
@@ -790,10 +796,12 @@ public class Main extends App {
                 }
                 ImGuiUtils.helpMarker("[b] Determines if the space wraps around at the borders or not.");
 
+                ImGui.text(physics.integrationMethod.name());
+
                 if (appSettings.autoDt) ImGui.beginDisabled();
                 ImGuiUtils.numberInput(
                         "Time Step",
-                        0, 100,
+                        0, 500,
                         (float) appSettings.dt * 1000f,
                         "%.2f ms",
                         value -> appSettings.dt = Math.max(0, value / 1000));
@@ -1391,6 +1399,14 @@ public class Main extends App {
             case "b" -> loop.enqueue(() -> physics.settings.wrap ^= true);
             case " " -> loop.pause ^= true;
             case "q" -> close();
+            case "i" -> loop.enqueue(() -> {
+                switch (physics.integrationMethod) {
+                    case EULER -> physics.integrationMethod = Physics.IntegrationMethod.RK4v1;
+                    case RK4v1 -> physics.integrationMethod = Physics.IntegrationMethod.RK4v2;
+                    case RK4v2 -> physics.integrationMethod = Physics.IntegrationMethod.RK4v3;
+                    case RK4v3 -> physics.integrationMethod = Physics.IntegrationMethod.EULER;
+                };
+            });
         }
     }
 
