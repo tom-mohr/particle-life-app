@@ -102,7 +102,10 @@ public final class ImGuiUtils {
         int imGuiSliderFlags = ImGuiSliderFlags.NoRoundToFormat;
         if (logarithmicScale) imGuiSliderFlags |= ImGuiSliderFlags.Logarithmic;
         if (ImGui.sliderFloat(label, valueBuffer, min, max, format, imGuiSliderFlags)) {
-            callback.onValueChanged(valueBuffer[0]);
+            if (ImGui.isMouseDragging(0, 0.0f)
+                    || ImGui.isItemDeactivatedAfterEdit() /* check if user pressed enter after text-edit */) {
+                callback.onValueChanged(valueBuffer[0]);
+            }
         }
     }
 
