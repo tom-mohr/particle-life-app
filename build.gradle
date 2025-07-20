@@ -2,10 +2,7 @@ import org.gradle.internal.os.OperatingSystem
 
 plugins {
     id "java"
-    id "application"                                     // for "run" task
-    id 'edu.sc.seis.launch4j' version '3.0.6'            // for generating .exe
-    id 'org.beryx.runtime' version '1.13.1'              // for generating JRE
-    id "io.github.goooler.shadow" version "8.1.8"        // only needed to make linux build
+    id "application"
 }
 
 def buildDir = layout.buildDirectory.get().asFile
@@ -30,46 +27,83 @@ run {
     delegate.workingDir = workingDir
 }
 
-launch4j {
-    icon = "${projectDir}/favicon.ico"
-    mainClassName = 'com.particle_life.app.Main'
-    dontWrapJar = true
-    requires64Bit = true
-    bundledJrePath = "jre"
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 
-// creates folder "jre"
-runtime {
-    options = ["--compress", "2"]
-    modules = [
-            "jdk.zipfs"  // needed for "jar" FileSystemProvider (ZipFileSystemProvider), not detected automatically by plugin
-    ]
-    additive = true
+application {
+    mainClass = 'com.particle_life.app.Main'
 }
 
-tasks.register('copyJre', Copy) {
-    dependsOn tasks.runtime
+// Create a fat jar with all dependencies
+task fatJar(type: Jar) {
+    archiveBaseName = 'particle-life-app-all'
+    archiveClassifier = ''
 
-    from "$buildDir/jre"
-    into "$workingDir/jre"
+    manifest {
+        attributes 'Main-Class': 'com.particle_life.app.Main'
+    }
+
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    with jar
+
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-tasks.register('copyLaunch4j', Copy) {
-    dependsOn tasks.createExe
+// Create macOS app using jpackage
+task createMacApp(type: Exec) {
+    dependsOn fatJar
 
-    from "$buildDir/launch4j"
-    into workingDir
+    doFirst {
+        delete "$buildDir/dist"
+
+        def jpackageArgs = [
+            'jpackage',
+            '--type', 'app-image',
+            '--name', 'ParticleLife',
+            '--input', 'build/libs',
+            '--main-jar', fatJar.archiveFileName.get(),
+            '--dest', "$buildDir/dist"
+        ]
+
+        // Add icon if it exists
+        def iconFile = file('src/main/resources/icon.icns')
+        if (iconFile.exists()) {
+            jpackageArgs.addAll(['--icon', iconFile.absolutePath])
+        }
+
+        commandLine jpackageArgs
+    }
 }
 
-tasks.register('assembleApp') {
-    dependsOn tasks.copyLaunch4j, tasks.copyResources, tasks.copyJre
+
+// Create DMG installer
+task createDmg(type: Exec) {
+    dependsOn createMacApp
+
+    doFirst {
+        def dmgArgs = [
+            'jpackage',
+            '--type', 'dmg',
+            '--name', 'ParticleLife',
+            '--app-image', "$buildDir/dist/ParticleLife.app",
+            '--dest', "$buildDir/dist"
+        ]
+
+        commandLine dmgArgs
+    }
 }
 
-tasks.register('zipApp', Zip) {
-    dependsOn tasks.assembleApp
-    from workingDir
-    destinationDirectory = layout.buildDirectory.dir("zipApp")
-    archiveFileName = "particle-life-app.zip"
+// Convenience task
+task packageMacOS {
+    dependsOn createDmg
+    doLast {
+        println "macOS app created at: $buildDir/dist/ParticleLife.app"
+        println "DMG installer created at: $buildDir/dist/ParticleLife-1.0.dmg"
+    }
 }
 
 group 'com.particle.life.app'
