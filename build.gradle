@@ -86,23 +86,45 @@ jar {
     processResources.exclude('*')
 }
 
-project.ext.lwjglVersion = "3.3.0"
-
+// set imguiNatives
 switch (OperatingSystem.current()) {
     case OperatingSystem.LINUX:
         def osArch = System.getProperty("os.arch")
-        project.ext.natives = osArch.startsWith("arm") || osArch.startsWith("aarch64")
+        project.ext.imguiNatives = osArch.startsWith("arm") || osArch.startsWith("aarch64")
                 ? "linux-${osArch.contains("64") || osArch.startsWith("armv8") ? "arm64" : "arm32"}"
                 : "linux"
         break
     case OperatingSystem.MAC_OS:
-        project.ext.natives = "macos"
+        project.ext.imGuiNatives = "macos"
         break
     case OperatingSystem.WINDOWS:
         def osArch = System.getProperty("os.arch")
-        project.ext.natives = osArch.contains("64")
+        project.ext.imGuiNatives = osArch.contains("64")
                 ? "windows${osArch.startsWith("aarch64") ? "-arm64" : ""}"
                 : "windows-x86"
+        break
+}
+
+project.ext.lwjglVersion = "3.3.6"
+
+// set lwjglNatives (code from https://www.lwjgl.org/customize)
+switch (OperatingSystem.current()) {
+    case OperatingSystem.LINUX:
+        project.ext.lwjglNatives = "natives-linux"
+        def osArch = System.getProperty("os.arch")
+        if (osArch.startsWith("arm") || osArch.startsWith("aarch64")) {
+            project.ext.lwjglNatives += osArch.contains("64") || osArch.startsWith("armv8") ? "-arm64" : "-arm32"
+        } else if  (osArch.startsWith("ppc")) {
+            project.ext.lwjglNatives += "-ppc64le"
+        } else if  (osArch.startsWith("riscv")) {
+            project.ext.lwjglNatives += "-riscv64"
+        }
+        break
+    case OperatingSystem.MAC_OS:
+        project.ext.lwjglNatives = "natives-macos"
+        break
+    case OperatingSystem.WINDOWS:
+        project.ext.lwjglNatives = "natives-windows"
         break
 }
 
@@ -134,11 +156,16 @@ dependencies {
 
     // GUI Library "Dear ImGui"
     implementation "io.github.spair:imgui-java-binding:$imguiVersion"
-    implementation "io.github.spair:imgui-java-natives-$natives:$imguiVersion"
+    implementation "io.github.spair:imgui-java-natives-$imGuiNatives:$imguiVersion"
 
-    // LWJGL (Lightweight Java Game Library)
-    // see https://www.lwjgl.org/customize for a list of all available contents
-    [".lwjgl", ".glfw", ".opengl", ".stb"].each {
-        implementation "org.lwjgl.osgi:org.lwjgl$it:$lwjglVersion"
-    }
+    // Lightweight Java Game Library "LWJGL" (code from https://www.lwjgl.org/customize)
+    implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
+    implementation "org.lwjgl:lwjgl"
+    implementation "org.lwjgl:lwjgl-glfw"
+    implementation "org.lwjgl:lwjgl-opengl"
+    implementation "org.lwjgl:lwjgl-stb"
+    runtimeOnly "org.lwjgl:lwjgl::$lwjglNatives"  // cleaner: replaced "implementation" with "runtimeOnly" for natives
+    runtimeOnly "org.lwjgl:lwjgl-glfw::$lwjglNatives"
+    runtimeOnly "org.lwjgl:lwjgl-opengl::$lwjglNatives"
+    runtimeOnly "org.lwjgl:lwjgl-stb::$lwjglNatives"
 }
