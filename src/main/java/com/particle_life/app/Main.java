@@ -91,7 +91,7 @@ public class Main extends App {
      * access the data while it is being modified by the physics simulation.
      */
     private PhysicsSnapshot physicsSnapshot;
-    private final LoadDistributor physicsSnapshotLoadDistributor = new LoadDistributor();  // speed up taking snapshots with parallelization
+    private LoadDistributor physicsSnapshotLoadDistributor;  // speed up taking snapshots with parallelization
     public AtomicBoolean newSnapshotAvailable = new AtomicBoolean(false);
 
     // local copy of snapshot:
@@ -199,6 +199,8 @@ public class Main extends App {
         }
 
         createPhysics();
+        loop = new Loop();
+        loop.start(this::updatePhysics);
 
         // set default selection for palette
         if (palettes.hasName(appSettings.palette)) {
@@ -237,14 +239,14 @@ public class Main extends App {
                 matrixGenerators.getActive(),
                 typeSetters.getActive());
         physicsSnapshot = new PhysicsSnapshot();
+        physicsSnapshotLoadDistributor = new LoadDistributor();
         physicsSnapshot.take(physics, physicsSnapshotLoadDistributor);
         newSnapshotAvailable.set(true);
+    }
 
-        loop = new Loop();
-        loop.start(realDt -> {
-            physics.settings.dt = appSettings.autoDt ? realDt : appSettings.dt;
-            physics.update();
-        });
+    private void updatePhysics(double realDt) {
+        physics.settings.dt = appSettings.autoDt ? realDt : appSettings.dt;
+        physics.update();
     }
 
     @Override
@@ -281,12 +283,10 @@ public class Main extends App {
             }
         }
 
-        try {
-            loop.stop(1000);
-            physics.shutdown(1000);
-            physicsSnapshotLoadDistributor.shutdown(1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        if (!loop.stop(1000)) {
+            loop.kill();
+            physics.kill();
+            physicsSnapshotLoadDistributor.kill();
         }
         imGuiGl3.dispose();
     }
@@ -955,38 +955,19 @@ public class Main extends App {
                 ImGui.closeCurrentPopup();
             }
 
-            ImGui.text("Physics didn't react since %4.1f seconds.".formatted(physicsNotReactingSince / 1000.0));
+            ImGui.text("Physics didn't react since %4.0f seconds.".formatted(physicsNotReactingSince / 1000.0));
 
-            if (ImGui.button("Try Reset")) {
-                try {
-                    if (loop.stop(1000)) {
-                        physics.shutdown(1000);
-                        createPhysics();
-                    } else {
-                        ImGui.openPopup("Taking too long");
-                    }
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+            if (ImGui.button("Reset Physics")) {
+                if (!loop.stop(1000)) {
+                    // physics didn't finish in time
+                    loop.kill();
+                    physics.kill();
+                    physicsSnapshotLoadDistributor.kill();
                 }
-            }
-
-            if (ImGui.button("Particle Count = 0?")) {
-                loop.enqueue(() -> physics.setParticleCount(0));
-            }
-
-            if (ImGui.beginPopupModal("Taking too long")) {
-
-                ImGui.text("Physics couldn't be stopped.");
-
-                if (ImGui.button("Continue Waiting")) {
-                    ImGui.closeCurrentPopup();
-                }
-
-                if (ImGui.button("Close App")) {
-                    close();// kill whole app
-                }
-
-                ImGui.endPopup();
+                // re-start loop and re-create physics with initial settings
+                createPhysics();
+                loop = new Loop();
+                loop.start(this::updatePhysics);
             }
 
             ImGui.endPopup();
