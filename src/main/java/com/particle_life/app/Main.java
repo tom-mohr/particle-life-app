@@ -21,6 +21,7 @@ import imgui.type.ImString;
 import org.joml.Matrix4d;
 import org.joml.Vector2d;
 import org.joml.Vector3d;
+import org.lwjgl.Version;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -45,14 +46,30 @@ import static org.lwjgl.opengl.GL30C.*;
 
 public class Main extends App {
 
+    private static final String JAVA_HOME = System.getProperty("java.home");
+    private static final String JVM_VERSION = System.getProperty("java.vm.version");
+    private static String LWJGL_VERSION;
+    private static String OPENGL_VENDOR;
+    private static String OPENGL_RENDERER;
+    private static String OPENGL_VERSION;
+    private static String GLSL_VERSION;
+
     public static void main(String[] args) {
+        System.out.println("Java Home: " + JAVA_HOME);
+        System.out.println("JVM Version: " + JVM_VERSION);
+
         Main main = new Main();
         try {
             main.appSettings.load(SETTINGS_FILE_NAME);
         } catch (IOException e) {
             main.error = new AppSettingsLoadException("Failed to load settings", e);
         }
-        main.launch("Particle Life Simulator", main.appSettings.startInFullscreen, ".internal/favicon.png");
+        main.launch("Particle Life Simulator",
+                main.appSettings.startInFullscreen,
+                ".internal/favicon.png",
+                // request OpenGL version 4.1 (corresponds to "#version 410" in shaders)
+                4, 1
+        );
     }
 
     private final AppSettings appSettings = new AppSettings();
@@ -152,6 +169,18 @@ public class Main extends App {
 
     @Override
     protected void setup() {
+        LWJGL_VERSION = Version.getVersion();
+        OPENGL_VENDOR = glGetString(GL_VENDOR);
+        OPENGL_RENDERER = glGetString(GL_RENDERER);
+        OPENGL_VERSION = glGetString(GL_VERSION);
+        GLSL_VERSION = glGetString(GL_SHADING_LANGUAGE_VERSION);
+
+        System.out.println("LWJGL Version: " + LWJGL_VERSION);
+        System.out.println("OpenGL Vendor: " + OPENGL_VENDOR);
+        System.out.println("OpenGL Renderer: " + OPENGL_RENDERER);
+        System.out.println("OpenGL Version: " + OPENGL_VERSION);
+        System.out.println("GLSL Version: " + GLSL_VERSION);
+
         glEnable(GL_MULTISAMPLE);
 
         // Method initializes LWJGL3 renderer.
@@ -1005,6 +1034,14 @@ public class Main extends App {
                 if (ImGuiUtils.link("particle-life.com", "https://particle-life.com")) {
                     setFullscreen(false);
                 }
+                ImGui.dummy(0, 10);
+                ImGui.text("Java Home: " + JAVA_HOME);
+                ImGui.text("JVM Version: " + JVM_VERSION);
+                ImGui.text("LWJGL Version: " + LWJGL_VERSION);
+                ImGui.text("OpenGL Vendor: " + OPENGL_VENDOR);
+                ImGui.text("OpenGL Renderer: " + OPENGL_RENDERER);
+                ImGui.text("OpenGL Version: " + OPENGL_VERSION);
+                ImGui.text("GLSL Version: " + GLSL_VERSION);
             }
             ImGui.end();
         }

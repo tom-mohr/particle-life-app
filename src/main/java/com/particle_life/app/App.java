@@ -39,10 +39,10 @@ public abstract class App {
     private int windowWidth = -1;
     private int windowHeight = -1;
 
-    public void launch(String title, boolean fullscreen, String iconPath) {
-        System.out.println("Using LWJGL " + Version.getVersion());
+    public void launch(String title, boolean fullscreen, String iconPath,
+                       int glContextVersionMajor, int glContextVersionMinor) {
 
-        init(title, fullscreen, iconPath);
+        init(title, fullscreen, iconPath, glContextVersionMajor, glContextVersionMinor);
 
         // This line is critical for LWJGL's interoperation with GLFW's
         // OpenGL context, or any context that is managed externally.
@@ -95,7 +95,8 @@ public abstract class App {
         imGuiLayer.destroyImGui();
     }
 
-    private void init(String title, boolean fullscreen, String iconPath) {
+    private void init(String title, boolean fullscreen, String iconPath,
+                      int glContextVersionMajor, int glContextVersionMinor) {
         // Setup an error callback. The default implementation
         // will print the error message in System.err.
         GLFWErrorCallback.createPrint(System.err).set();
@@ -110,9 +111,9 @@ public abstract class App {
         glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE); // the window will be resizable
         glfwWindowHint(GLFW_SAMPLES, 16);
 
-        // request OpenGL version 4.1 (corresponds to "#version 410" in shaders)
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+        // request OpenGL version (corresponds to some GLSL version, i.e. "#version XYZ" in shaders)
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, glContextVersionMajor);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, glContextVersionMinor);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
         // Create the window
@@ -139,7 +140,7 @@ public abstract class App {
             window = glfwCreateWindow(width, height, title, NULL, NULL);
         }
 
-        if (window == NULL) throw new RuntimeException("Failed to create the GLFW window");
+        if (window == NULL) throw new IllegalStateException("Failed to create the GLFW window");
 
         // set window icon
         try {
