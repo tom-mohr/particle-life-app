@@ -41,7 +41,6 @@ class ExtendedPhysics extends Physics {
     public void setTypeCount(int[] typeCount) {
 
         int nTypes = settings.matrix.size();
-        if (nTypes < 2) return;
 
         if (typeCount.length != nTypes) {
             throw new IllegalArgumentException(String.format(
