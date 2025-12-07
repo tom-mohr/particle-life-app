@@ -51,9 +51,10 @@ public class MultisampledFramebuffer {
 
     public void ensureSize(int width, int height, int samples) {
         if (this.width != width || this.height != height || this.samples != samples) {
+            int boundedSamples = Math.min(samples, glGetInteger(GL_MAX_SAMPLES));
 
             glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureMulti);
-            glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, samples, GL_RGBA, width, height, true);
+            glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, boundedSamples, GL_RGBA, width, height, true);
             glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
 
             glBindTexture(GL_TEXTURE_2D, textureSingle);
@@ -69,7 +70,7 @@ public class MultisampledFramebuffer {
 
             this.width = width;
             this.height = height;
-            this.samples = samples;
+            this.samples = boundedSamples;
         }
     }
 
