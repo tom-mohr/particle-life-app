@@ -4,12 +4,54 @@ plugins {
     id "java"
     id "application"                                     // for "run" task
     id 'edu.sc.seis.launch4j' version '3.0.6'            // for generating .exe
-    id 'org.beryx.runtime' version '1.13.1'              // for generating JRE
     id "io.github.goooler.shadow" version "8.1.8"        // only needed to make linux build
+}
+
+// use Java 21
+def TARGET_JAVA = JavaLanguageVersion.of(21)
+java {
+    toolchain {
+        languageVersion = TARGET_JAVA
+    }
 }
 
 def buildDir = layout.buildDirectory.get().asFile
 def workingDir = "$buildDir/app"
+
+def javaHome = javaToolchains.launcherFor {
+    languageVersion = TARGET_JAVA
+}.get().metadata.installationPath
+
+// creates folder "jre"
+tasks.register('createRuntime') {
+    printf("Using Java Home: %s%n", javaHome)
+    def jlink = file("${javaHome}/bin/${OperatingSystem.current().isWindows() ? "jlink.exe" : "jlink"}")
+    def outputDir = file("$buildDir/jre")
+
+    inputs.file(jlink)
+    outputs.dir(outputDir)
+
+    doLast {
+        outputDir.deleteDir()
+        exec {
+            commandLine jlink,
+                    "--no-header-files",
+                    "--no-man-pages",
+                    "--strip-debug",
+                    "--module-path", "${javaHome}/jmods",
+                    "--compress", "zip-0",  // no compression here -> will be compressed in final zip
+                    "--add-modules", "java.base,java.desktop,java.scripting,java.sql,jdk.unsupported",
+                    "--output", outputDir
+            /*
+            Note: The set of modules above has been determined with jdep.
+            1. Build the project: ./gradlew build
+            2. Remove build/libs/particle-life-app.jar
+            3. Run jdeps --print-module-deps --ignore-missing-deps --module-path build/libs build/libs/particle-life-app-all.jar
+            The output lists all required modules in the last line.
+             */
+        }
+    }
+}
 
 application {
     mainClass = "com.particle_life.app.Main"  // required for "run" task
@@ -38,17 +80,8 @@ launch4j {
     bundledJrePath = "jre"
 }
 
-// creates folder "jre"
-runtime {
-    options = ["--compress", "2"]
-    modules = [
-            "jdk.zipfs"  // needed for "jar" FileSystemProvider (ZipFileSystemProvider), not detected automatically by plugin
-    ]
-    additive = true
-}
-
 tasks.register('copyJre', Copy) {
-    dependsOn tasks.runtime
+    dependsOn tasks.createRuntime
 
     from "$buildDir/jre"
     into "$workingDir/jre"
@@ -75,8 +108,8 @@ tasks.register('zipApp', Zip) {
 group 'com.particle.life.app'
 
 ext {
-    lwjglVersion = '3.3.0'
-    imguiVersion = '1.86.2'
+    lwjglVersion = "3.3.6"  // requires at least Java 21
+    imGuiVersion = "1.86.2"
 }
 
 jar {
@@ -86,11 +119,11 @@ jar {
     processResources.exclude('*')
 }
 
-// set imguiNatives
+// set imGuiNatives
 switch (OperatingSystem.current()) {
     case OperatingSystem.LINUX:
         def osArch = System.getProperty("os.arch")
-        project.ext.imguiNatives = osArch.startsWith("arm") || osArch.startsWith("aarch64")
+        project.ext.imGuiNatives = osArch.startsWith("arm") || osArch.startsWith("aarch64")
                 ? "linux-${osArch.contains("64") || osArch.startsWith("armv8") ? "arm64" : "arm32"}"
                 : "linux"
         break
@@ -105,8 +138,6 @@ switch (OperatingSystem.current()) {
         break
 }
 
-project.ext.lwjglVersion = "3.3.6"
-
 // set lwjglNatives (code from https://www.lwjgl.org/customize)
 switch (OperatingSystem.current()) {
     case OperatingSystem.LINUX:
@@ -114,9 +145,9 @@ switch (OperatingSystem.current()) {
         def osArch = System.getProperty("os.arch")
         if (osArch.startsWith("arm") || osArch.startsWith("aarch64")) {
             project.ext.lwjglNatives += osArch.contains("64") || osArch.startsWith("armv8") ? "-arm64" : "-arm32"
-        } else if  (osArch.startsWith("ppc")) {
+        } else if (osArch.startsWith("ppc")) {
             project.ext.lwjglNatives += "-ppc64le"
-        } else if  (osArch.startsWith("riscv")) {
+        } else if (osArch.startsWith("riscv")) {
             project.ext.lwjglNatives += "-riscv64"
         }
         break
@@ -154,9 +185,9 @@ dependencies {
     // Linear Algebra Library "JOML"
     implementation 'org.joml:joml:1.10.1'
 
-    // GUI Library "Dear ImGui"
-    implementation "io.github.spair:imgui-java-binding:$imguiVersion"
-    implementation "io.github.spair:imgui-java-natives-$imGuiNatives:$imguiVersion"
+    // GUI Library "Dear ImGui" from https://github.com/SpaiR/imgui-java
+    implementation "io.github.spair:imgui-java-binding:$imGuiVersion"
+    implementation "io.github.spair:imgui-java-natives-$imGuiNatives:$imGuiVersion"
 
     // Lightweight Java Game Library "LWJGL" (code from https://www.lwjgl.org/customize)
     implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
