@@ -43,6 +43,7 @@ import java.util.zip.ZipOutputStream;
 import static org.lwjgl.opengl.GL11C.*;
 import static org.lwjgl.opengl.GL13C.GL_MULTISAMPLE;
 import static org.lwjgl.opengl.GL30C.*;
+import static org.lwjgl.opengl.GL32C.*;
 
 public class Main extends App {
 
@@ -52,6 +53,7 @@ public class Main extends App {
     private static String OPENGL_VENDOR;
     private static String OPENGL_RENDERER;
     private static String OPENGL_VERSION;
+    private static String OPENGL_PROFILE;
     private static String GLSL_VERSION;
 
     public static void main(String[] args) {
@@ -173,12 +175,16 @@ public class Main extends App {
         OPENGL_VENDOR = glGetString(GL_VENDOR);
         OPENGL_RENDERER = glGetString(GL_RENDERER);
         OPENGL_VERSION = glGetString(GL_VERSION);
+        int profileMask = glGetInteger(GL_CONTEXT_PROFILE_MASK);
+        OPENGL_PROFILE = (profileMask & GL_CONTEXT_CORE_PROFILE_BIT) != 0 ? "Core" :
+                (profileMask & GL_CONTEXT_COMPATIBILITY_PROFILE_BIT) != 0 ? "Compatibility" : "Unknown";
         GLSL_VERSION = glGetString(GL_SHADING_LANGUAGE_VERSION);
 
         System.out.println("LWJGL Version: " + LWJGL_VERSION);
         System.out.println("OpenGL Vendor: " + OPENGL_VENDOR);
         System.out.println("OpenGL Renderer: " + OPENGL_RENDERER);
         System.out.println("OpenGL Version: " + OPENGL_VERSION);
+        System.out.println("OpenGL Profile: " + OPENGL_PROFILE);
         System.out.println("GLSL Version: " + GLSL_VERSION);
 
         glEnable(GL_MULTISAMPLE);
@@ -1041,6 +1047,7 @@ public class Main extends App {
                 ImGui.text("OpenGL Vendor: " + OPENGL_VENDOR);
                 ImGui.text("OpenGL Renderer: " + OPENGL_RENDERER);
                 ImGui.text("OpenGL Version: " + OPENGL_VERSION);
+                ImGui.text("OpenGL Profile: " + OPENGL_PROFILE);
                 ImGui.text("GLSL Version: " + GLSL_VERSION);
             }
             ImGui.end();
