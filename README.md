@@ -1,13 +1,18 @@
 # 🦠 Particle Life App
 
-A GUI for the [Particle Life Framework](https://github.com/tom-mohr/particle-life).
+An interactive desktop app that simulates Particle Life.  
+**Particle Life** is a simple particle system that exhibits complex emergent behavior.
 
-- [Download](https://particle-life.com) (.exe for Windows)
-- [Documentation](https://particle-life.com/docs)
+## Get Started
 
-Join the [Discord server](https://discord.gg/Fd64AhKzMD)!
+📦 [**Installation**](https://particle-life.com/app/installation) (Windows)  
+🎬 [**Video**](https://www.youtube.com/watch?v=p4YirERTVF0)  
+📄 [**Docs**](https://particle-life.com/app/controls)  
+💬 [**Discord Server**](https://discord.gg/Fd64AhKzMD)
 
-![Screenshot of the App](./readme_assets/app_demo.png)
+## Preview
+
+![Particle Life App – simulation preview](./readme_assets/app_demo.png)
 
 ## Run This App From Source
 
