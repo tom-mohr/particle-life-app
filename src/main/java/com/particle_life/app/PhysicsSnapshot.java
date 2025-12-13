@@ -1,8 +1,8 @@
 package com.particle_life.app;
 
-import com.particle_life.LoadDistributor;
-import com.particle_life.Particle;
-import com.particle_life.PhysicsSettings;
+import com.particle_life.backend.LoadDistributor;
+import com.particle_life.backend.Particle;
+import com.particle_life.backend.PhysicsSettings;
 
 class PhysicsSnapshot {
 

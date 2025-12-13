@@ -1,6 +1,6 @@
 package com.particle_life.app.cursors;
 
-import com.particle_life.Particle;
+import com.particle_life.backend.Particle;
 import org.joml.Vector3d;
 
 import java.io.IOException;

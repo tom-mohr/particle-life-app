@@ -1,6 +1,6 @@
 package com.particle_life.app;
 
-import com.particle_life.PhysicsSettings;
+import com.particle_life.backend.PhysicsSettings;
 import com.particle_life.app.toml_util.TomlFile;
 import com.particle_life.app.toml_util.TomlKey;
 

@@ -1,7 +1,7 @@
 package com.particle_life.app;
 
-import com.particle_life.DefaultPositionSetter;
-import com.particle_life.PositionSetter;
+import com.particle_life.backend.DefaultPositionSetter;
+import com.particle_life.backend.PositionSetter;
 import com.particle_life.app.selection.InfoWrapper;
 import com.particle_life.app.selection.InfoWrapperProvider;
 

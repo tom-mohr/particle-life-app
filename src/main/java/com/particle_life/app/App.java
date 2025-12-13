@@ -1,7 +1,6 @@
 package com.particle_life.app;
 
-import com.particle_life.Clock;
-import org.lwjgl.Version;
+import com.particle_life.backend.Clock;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWImage;
 import org.lwjgl.glfw.GLFWVidMode;

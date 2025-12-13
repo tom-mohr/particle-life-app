@@ -1,7 +1,7 @@
 package com.particle_life.app;
 
-import com.particle_life.DefaultTypeSetter;
-import com.particle_life.TypeSetter;
+import com.particle_life.backend.DefaultTypeSetter;
+import com.particle_life.backend.TypeSetter;
 import com.particle_life.app.selection.InfoWrapper;
 import com.particle_life.app.selection.InfoWrapperProvider;
 

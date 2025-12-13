@@ -1,7 +1,9 @@
 package com.particle_life.app;
 
-import com.particle_life.*;
-import com.particle_life.app.color.*;
+import com.particle_life.app.color.Color;
+import com.particle_life.app.color.NaturalRainbowPalette;
+import com.particle_life.app.color.Palette;
+import com.particle_life.app.color.PalettesProvider;
 import com.particle_life.app.cursors.*;
 import com.particle_life.app.io.MatrixIO;
 import com.particle_life.app.io.ParticlesIO;
@@ -11,6 +13,7 @@ import com.particle_life.app.shaders.CursorShader;
 import com.particle_life.app.shaders.ParticleShader;
 import com.particle_life.app.shaders.ShaderProvider;
 import com.particle_life.app.utils.*;
+import com.particle_life.backend.*;
 import imgui.ImGui;
 import imgui.flag.*;
 import imgui.gl3.ImGuiImplGl3;

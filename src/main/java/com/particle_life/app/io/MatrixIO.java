@@ -1,7 +1,7 @@
 package com.particle_life.app.io;
 
-import com.particle_life.DefaultMatrix;
-import com.particle_life.Matrix;
+import com.particle_life.backend.DefaultMatrix;
+import com.particle_life.backend.Matrix;
 
 import java.io.*;
 import java.util.Arrays;

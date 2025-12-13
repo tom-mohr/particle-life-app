@@ -1,6 +1,6 @@
 package com.particle_life.app.io;
 
-import com.particle_life.Particle;
+import com.particle_life.backend.Particle;
 
 import java.io.*;
 

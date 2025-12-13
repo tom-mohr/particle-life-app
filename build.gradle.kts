@@ -188,9 +188,6 @@ repositories {
 }
 
 dependencies {
-    // Particle Life Backend
-    implementation("com.github.tom-mohr:particle-life:v0.5.2")
-
     // YAML Parser "YamlBeans"
     implementation("com.esotericsoftware.yamlbeans:yamlbeans:1.17")
 

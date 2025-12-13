@@ -1,7 +1,7 @@
 package com.particle_life.app;
 
-import com.particle_life.DefaultMatrix;
-import com.particle_life.Matrix;
+import com.particle_life.backend.DefaultMatrix;
+import com.particle_life.backend.Matrix;
 
 import java.util.ArrayList;
 import java.util.Locale;
