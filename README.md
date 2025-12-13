@@ -18,29 +18,33 @@ An interactive desktop app that simulates Particle Life.
 
 You can easily run this app from the source code.
 
-First, check that you have
+1. Make sure you have the required tools installed:  
+  [Git](https://git-scm.com/downloads)  
+  [JDK](https://jdk.java.net/25) ("Java") with a version between 17 and 25.  
+  (Check your version with `java -version`.)  
 
-- [Git](https://git-scm.com/downloads) installed.
-- [Java](https://jdk.java.net/19/) installed, with a version of at least 17 and at most 25.
-  (Check your version with `java -version`.)
-  (Note: This is required in order to run the `./gradlew` command below, which uses Gradle 9.2.1.)
+2. Download the source code and navigate into the folder:
+   ```bash
+   git clone https://github.com/tom-mohr/particle-life-app.git
+   ```
 
-Your local Java version is only needed to run Gradle.
+   ```bash
+   cd particle-life-app
+   ```
+
+3. Run the app:
+   ```bash
+   ./gradlew run
+   ```
+
+   After some time, the program should launch and you should see particles on your screen. 
+
+Feel free to mess with the code!
+
+Note: Your local JDK is only needed to run Gradle, i.e. the `./gradlew` command.
+Since this project uses Gradle version 9.2, you need at least JDK 17 installed locally.
 The app itself will run with Java 21, which Gradle will download automatically.
 
-Then, download the source code:
-```bash
-git clone https://github.com/tom-mohr/particle-life-app.git
-```
-
-Navigate into the folder and run the app:
-```bash
-cd particle-life-app
-./gradlew run
-```
-
-After some time, the program should launch and you should see particles on your screen.
-Feel free to mess with the code!
 
 ## Troubleshooting
 
