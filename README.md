@@ -43,15 +43,19 @@ If you encounter any problems, ask for help in the [`#tech-support`](https://dis
 
 ## How to make a release (on Windows)
 
-- Confirm that everything is working correctly and check in with others that the current state of the main branch is ready for release.
+- Confirm that everything is working correctly and check in with others
+  that the current state of the main branch is ready for release.
+- Choose a new version string.
+  You can find the current version string in `gradle.properties`.
+  The version name should comply with [semantic versioning](https://semver.org/).
+  Talk to others if you are unsure about what to choose here.
+- Update the current version string in `gradle.properties`.
 - Run `./gradlew zipApp` from the project root.
   This generates the zip file `particle-life-app.zip` in `./build/zipApp/`.
   It includes the Windows executable (`.exe`) along with other files.
 - Go to the [Releases](https://github.com/tom-mohr/particle-life-app/releases) section of this GitHub repo and click `Draft a new release`.
-- Click `Choose a tag` and type the new version name:
-  - Prefix the version name with the letter `v`. Some good tag names might be `v1.0.0` or `v2.3.4`.
-  - The version name should comply with [semantic versioning](https://semver.org/). Talk to others if you are unsure about what to choose here.
-- Click `Create a new tag`.
+- Click `Choose a tag` and type the new version name, but prefixed with `v`, e.g. `v1.2.3`.
+  Click `Create a new tag`.
 - Set the release title to match the tag name.
 - Use the description to summarize the changes of all commits since the last release.
 - Add the generated `particle-life-app.zip` as an asset to the release.

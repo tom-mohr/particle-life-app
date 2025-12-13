@@ -1,22 +1,36 @@
+import org.apache.tools.ant.filters.ReplaceTokens
 import org.gradle.internal.os.OperatingSystem
 
 plugins {
-    id "java"
-    id "application"                                     // for "run" task
-    id 'edu.sc.seis.launch4j' version '3.0.6'            // for generating .exe
-    id "io.github.goooler.shadow" version "8.1.8"        // only needed to make linux build
+    id 'base'
+    id 'java'
+    id 'application'                                     // for "run" task
+    id 'edu.sc.seis.launch4j' version '3.0.6'            // for generating Windows .exe
+    id 'io.github.goooler.shadow' version '8.1.8'        // only needed to make linux build
+}
+
+def workingDir = "$buildDir/app"
+
+// copy resources to build directory
+tasks.register('copyResources', Copy) {
+    from "$projectDir/src/main/resources"
+    into workingDir
+
+    filesMatching("**/*.txt") {
+        filter(ReplaceTokens, tokens: [
+                // replace @APP_VERSION@ in resource files with string taken from gradle.properties
+                APP_VERSION: project.version
+        ])
+    }
 }
 
 // use Java 21
-def TARGET_JAVA = JavaLanguageVersion.of(21)
+def TARGET_JAVA = JavaLanguageVersion.of(project.jdkVersion.toInteger())  // from gradle.properties
 java {
     toolchain {
         languageVersion = TARGET_JAVA
     }
 }
-
-def buildDir = layout.buildDirectory.get().asFile
-def workingDir = "$buildDir/app"
 
 def javaHome = javaToolchains.launcherFor {
     languageVersion = TARGET_JAVA
@@ -25,7 +39,7 @@ def javaHome = javaToolchains.launcherFor {
 // creates folder "jre"
 tasks.register('createRuntime') {
     printf("Using Java Home: %s%n", javaHome)
-    def jlink = file("${javaHome}/bin/${OperatingSystem.current().isWindows() ? "jlink.exe" : "jlink"}")
+    def jlink = file("$javaHome/bin/${OperatingSystem.current().isWindows() ? 'jlink.exe' : 'jlink'}")
     def outputDir = file("$buildDir/jre")
 
     inputs.file(jlink)
@@ -38,7 +52,7 @@ tasks.register('createRuntime') {
                     "--no-header-files",
                     "--no-man-pages",
                     "--strip-debug",
-                    "--module-path", "${javaHome}/jmods",
+                    "--module-path", "$javaHome/jmods",
                     "--compress", "zip-0",  // no compression here -> will be compressed in final zip
                     "--add-modules", "java.base,java.desktop,java.scripting,java.sql,jdk.unsupported",
                     "--output", outputDir
@@ -53,38 +67,19 @@ tasks.register('createRuntime') {
     }
 }
 
-application {
-    mainClass = "com.particle_life.app.Main"  // required for "run" task
-
-    if (OperatingSystem.current() == OperatingSystem.MAC_OS) {
-        applicationDefaultJvmArgs = ["-XstartOnFirstThread"]
-    }
-}
-
-// copy resources to build directory
-tasks.register("copyResources", Copy) {
-    from "$projectDir/src/main/resources"
-    into workingDir
-}
-
-run {
-    dependsOn(tasks.copyResources)
-    delegate.workingDir = workingDir
-}
-
-launch4j {
-    icon = "${projectDir}/favicon.ico"
-    mainClassName = 'com.particle_life.app.Main'
-    dontWrapJar = true
-    requires64Bit = true
-    bundledJrePath = "jre"
-}
-
 tasks.register('copyJre', Copy) {
     dependsOn tasks.createRuntime
 
     from "$buildDir/jre"
     into "$workingDir/jre"
+}
+
+launch4j {
+    icon = "$projectDir/favicon.ico"
+    mainClassName = 'com.particle_life.app.Main'
+    dontWrapJar = true
+    requires64Bit = true
+    bundledJrePath = 'jre'
 }
 
 tasks.register('copyLaunch4j', Copy) {
@@ -95,7 +90,7 @@ tasks.register('copyLaunch4j', Copy) {
 }
 
 tasks.register('assembleApp') {
-    dependsOn tasks.copyLaunch4j, tasks.copyResources, tasks.copyJre
+    dependsOn tasks.copyResources, tasks.copyJre, tasks.copyLaunch4j
 }
 
 tasks.register('zipApp', Zip) {
@@ -105,11 +100,24 @@ tasks.register('zipApp', Zip) {
     archiveFileName = "particle-life-app.zip"
 }
 
+application {
+    mainClass = 'com.particle_life.app.Main'  // required for "run" task
+
+    if (OperatingSystem.current() == OperatingSystem.MAC_OS) {
+        applicationDefaultJvmArgs = ['-XstartOnFirstThread']
+    }
+}
+
+run {
+    dependsOn(tasks.copyResources)
+    delegate.workingDir = workingDir
+}
+
 group 'com.particle.life.app'
 
 ext {
-    lwjglVersion = "3.3.6"  // requires at least Java 21
-    imGuiVersion = "1.86.2"
+    lwjglVersion = '3.3.6'  // requires at least Java 21
+    imGuiVersion = '1.86.2'
 }
 
 jar {
@@ -171,7 +179,7 @@ repositories {
 dependencies {
 
     // Particle Life Backend
-    implementation "com.github.tom-mohr:particle-life:v0.5.2"
+    implementation 'com.github.tom-mohr:particle-life:v0.5.2'
 
     // YAML Parser "YamlBeans"
     implementation 'com.esotericsoftware.yamlbeans:yamlbeans:1.17'

@@ -49,6 +49,7 @@ public class Main extends App {
 
     private static final String JAVA_HOME = System.getProperty("java.home");
     private static final String JVM_VERSION = System.getProperty("java.vm.version");
+    private static String APP_VERSION;
     private static String LWJGL_VERSION;
     private static String OPENGL_VENDOR;
     private static String OPENGL_RENDERER;
@@ -171,6 +172,11 @@ public class Main extends App {
 
     @Override
     protected void setup() {
+        try {
+            APP_VERSION = ResourceAccess.readTextFile(".internal/version.txt").trim();
+        } catch (IOException e) {
+            APP_VERSION = "(version unknown)";
+        }
         LWJGL_VERSION = Version.getVersion();
         OPENGL_VENDOR = glGetString(GL_VENDOR);
         OPENGL_RENDERER = glGetString(GL_RENDERER);
@@ -180,6 +186,7 @@ public class Main extends App {
                 (profileMask & GL_CONTEXT_COMPATIBILITY_PROFILE_BIT) != 0 ? "Compatibility" : "Unknown";
         GLSL_VERSION = glGetString(GL_SHADING_LANGUAGE_VERSION);
 
+        System.out.println("Particle Life App " + APP_VERSION);
         System.out.println("LWJGL Version: " + LWJGL_VERSION);
         System.out.println("OpenGL Vendor: " + OPENGL_VENDOR);
         System.out.println("OpenGL Renderer: " + OPENGL_RENDERER);
@@ -1034,6 +1041,7 @@ public class Main extends App {
         if (showAboutWindow.get()) {
             ImGui.setNextWindowPos(width / 2f, height / 2f, ImGuiCond.FirstUseEver, 0.5f, 0.5f);
             if (ImGui.begin("About", showAboutWindow, ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse)) {
+                ImGui.text("Particle Life App " + APP_VERSION);
                 ImGui.text("By Tom Mohr.");
                 ImGui.text("GPL-3.0 License.");
                 ImGui.dummy(0, 10);
