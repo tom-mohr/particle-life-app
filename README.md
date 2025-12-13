@@ -16,9 +16,9 @@ You can easily run this app from the source code.
 First, check that you have
 
 - [Git](https://git-scm.com/downloads) installed.
-- [Java](https://jdk.java.net/19/) installed, with a version of at least 17 and at most 22.
+- [Java](https://jdk.java.net/19/) installed, with a version of at least 17 and at most 25.
   (Check your version with `java -version`.)
-  (Note: This is required in order to run the `./gradlew` command below, which uses Gradle 8.8.)
+  (Note: This is required in order to run the `./gradlew` command below, which uses Gradle 9.2.1.)
 
 Your local Java version is only needed to run Gradle.
 The app itself will run with Java 21, which Gradle will download automatically.

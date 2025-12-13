@@ -8,20 +8,23 @@ plugins {
     base
     java
     application                                    // for "run" task
-    id("edu.sc.seis.launch4j") version "3.0.6"     // for generating Windows .exe
+    id("edu.sc.seis.launch4j") version "4.0.0"     // for generating Windows .exe
     id("io.github.goooler.shadow") version "8.1.8" // only needed to make linux build
 }
 
 val appWorkingDir = layout.buildDirectory.dir("app")
+val appVersion = version.toString()  // from gradle.properties
 
 // copy resources to build directory
 tasks.register<Copy>("copyResources") {
+    inputs.property("version", appVersion)
+
     from("$projectDir/src/main/resources")
     into(appWorkingDir)
 
     filesMatching("**/*.txt") {
         // replace @APP_VERSION@ in resource files with string taken from gradle.properties
-        filter<ReplaceTokens>("tokens" to mapOf("APP_VERSION" to project.version))
+        filter<ReplaceTokens>("tokens" to mapOf("APP_VERSION" to appVersion))
     }
 }
 
@@ -37,7 +40,7 @@ val javaHome: File = javaToolchains.launcherFor {
 }.get().metadata.installationPath.asFile
 
 // creates folder "jre"
-tasks.register("createRuntime") {
+tasks.register<Exec>("createRuntime") {
     println("Using Java Home: $javaHome")
 
     val jlink = file(
@@ -49,27 +52,26 @@ tasks.register("createRuntime") {
     inputs.file(jlink)
     outputs.dir(outputDir)
 
-    doLast {
+    doFirst {
         outputDir.deleteRecursively()
-        exec {
-            /* Note: The set of modules below has been determined with jdeps as follows:
-            1. Build the project: ./gradlew build
-            2. Remove build/libs/particle-life-app.jar
-            3. Run jdeps --print-module-deps --ignore-missing-deps --module-path build/libs build/libs/particle-life-app-all.jar
-            The output lists all required modules in the last line. */
-            commandLine(
-                jlink,
-                "--no-header-files",
-                "--no-man-pages",
-                "--strip-debug",
-                "--module-path", "$javaHome/jmods",
-                "--compress", "zip-0", // no compression here -> will be compressed in final zip
-                "--add-modules",
-                "java.base,java.desktop,java.scripting,java.sql,jdk.unsupported",
-                "--output", outputDir
-            )
-        }
     }
+
+    /* Note: The set of modules below has been determined with jdeps as follows:
+    1. Build the project: ./gradlew build
+    2. Remove build/libs/particle-life-app.jar
+    3. Run jdeps --print-module-deps --ignore-missing-deps --module-path build/libs build/libs/particle-life-app-all.jar
+    The output lists all required modules in the last line. */
+    commandLine(
+        jlink,
+        "--no-header-files",
+        "--no-man-pages",
+        "--strip-debug",
+        "--module-path", "$javaHome/jmods",
+        "--compress", "zip-0", // no compression here -> will be compressed in final zip
+        "--add-modules",
+        "java.base,java.desktop,java.scripting,java.sql,jdk.unsupported",
+        "--output", outputDir
+    )
 }
 
 tasks.register<Copy>("copyJre") {
