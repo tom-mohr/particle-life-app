@@ -127,7 +127,7 @@ tasks.processResources {
     exclude("**/*")
 }
 
-val imGuiVersion = "1.86.2"
+val imGuiVersion = "1.86.12"
 
 // set imGuiNatives
 val imGuiNatives: String = when {
