@@ -218,6 +218,8 @@ public class Main extends App {
         physicsSession.start(this::updatePhysics);
         loop = physicsSession.loop;
         saveLoadService = new SaveLoadService(physics, this::reportError, requestedSaveCardsLoading);
+        applySnapshotUpdate(physicsSession.consumeSnapshotIfAvailable(
+                particleRenderer, shaders.getActive()));
 
         // set default selection for palette
         if (palettes.hasName(appSettings.palette)) {
@@ -316,7 +318,17 @@ public class Main extends App {
         physicsSnapshotLoadDistributor = physicsSession.physicsSnapshotLoadDistributor;
         loop = physicsSession.loop;
         saveLoadService = new SaveLoadService(physics, this::reportError, requestedSaveCardsLoading);
+        applySnapshotUpdate(physicsSession.consumeSnapshotIfAvailable(
+                particleRenderer, shaders.getActive()));
         initGuiContext();
+    }
+
+    private void applySnapshotUpdate(PhysicsSession.SnapshotUpdate snapshotUpdate) {
+        if (snapshotUpdate != null) {
+            settings = snapshotUpdate.settings();
+            particleCount = snapshotUpdate.particleCount();
+            preferredNumberOfThreads = snapshotUpdate.preferredNumberOfThreads();
+        }
     }
 
     private void updatePhysics(double realDt) {
@@ -418,8 +430,11 @@ public class Main extends App {
 
         camera.update(appSettings, renderClock, input, width, height, pmouseX, pmouseY, mouseX, mouseY);
 
+        applySnapshotUpdate(physicsSession.consumeSnapshotIfAvailable(
+                particleRenderer, shaders.getActive()));
+
         // count particles under cursor from snapshot data (avoids cross-thread access to physics.particles)
-        if (physicsSnapshot.positions != null) {
+        if (physicsSnapshot.positions != null && settings != null) {
             cursorParticleCount = cursor.countSelection(
                     physicsSnapshot.positions,
                     physicsSnapshot.particleCount,
@@ -429,14 +444,6 @@ public class Main extends App {
         CursorInteractionHandler.handleDragging(
                 input, cursor, screen, cursorActions1, cursorActions2,
                 appSettings, loop, physics, pmouseX, pmouseY, mouseX, mouseY);
-
-        PhysicsSession.SnapshotUpdate snapshotUpdate = physicsSession.consumeSnapshotIfAvailable(
-                particleRenderer, shaders.getActive());
-        if (snapshotUpdate != null) {
-            settings = snapshotUpdate.settings();
-            particleCount = snapshotUpdate.particleCount();
-            preferredNumberOfThreads = snapshotUpdate.preferredNumberOfThreads();
-        }
 
         physicsSession.scheduleSnapshotCapture();
 
