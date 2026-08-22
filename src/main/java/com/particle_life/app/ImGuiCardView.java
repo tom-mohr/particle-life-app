@@ -20,12 +20,12 @@ import java.util.zip.ZipFile;
 
 import static org.lwjgl.opengl.GL11C.*;
 
-class ImGuiCardView {
+public class ImGuiCardView {
 
     public static class Card {
-        String name;
-        File file;
-        int img;
+        public String name;
+        public File file;
+        public int img;
 
         public Card(File file) {
             this(

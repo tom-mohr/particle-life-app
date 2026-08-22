@@ -9,7 +9,7 @@ plugins {
     java
     application                                    // for "run" task
     id("edu.sc.seis.launch4j") version "4.0.0"     // for generating Windows .exe
-    id("io.github.goooler.shadow") version "8.1.8" // only needed to make linux build
+    id("com.gradleup.shadow") version "9.4.1"      // only needed to make linux build
 }
 
 val appWorkingDir = layout.buildDirectory.dir("app")
@@ -127,7 +127,7 @@ tasks.processResources {
     exclude("**/*")
 }
 
-val imGuiVersion = "1.86.2"
+val imGuiVersion = "1.86.12"
 
 // set imGuiNatives
 val imGuiNatives: String = when {

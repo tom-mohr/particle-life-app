@@ -29,6 +29,16 @@ public class MultisampledFramebuffer {
         textureSingle = glGenTextures();
     }
 
+    public static MultisampledFramebuffer createLinearFiltered() {
+        MultisampledFramebuffer framebuffer = new MultisampledFramebuffer();
+        framebuffer.init();
+        glBindTexture(GL_TEXTURE_2D, framebuffer.textureSingle);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        return framebuffer;
+    }
+
     public void clear(float red, float green, float blue, float alpha) {
         int previousFramebuffer = glGetInteger(GL_FRAMEBUFFER_BINDING);
 

@@ -141,13 +141,15 @@ public abstract class App {
 
         if (window == NULL) throw new IllegalStateException("Failed to create the GLFW window");
 
-        // set window icon
-        try {
-            setWindowIcon(iconPath);
-        } catch (IOException e) {
-            System.err.println("Failed to set window icon: " + e.getMessage());
-            e.printStackTrace();
-            // just continue without icon
+        // set window icon (macOS regular windows do not support custom icons)
+        if (!System.getProperty("os.name").startsWith("Mac")) {
+            try {
+                setWindowIcon(iconPath);
+            } catch (IOException e) {
+                System.err.println("Failed to set window icon: " + e.getMessage());
+                e.printStackTrace();
+                // just continue without icon
+            }
         }
 
         // Get the thread stack and push a new frame

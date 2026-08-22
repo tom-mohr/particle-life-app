@@ -9,9 +9,9 @@ import imgui.ImVec2;
 
 import java.util.Arrays;
 
-class ImGuiBarGraph {
+public class ImGuiBarGraph {
 
-    interface SetCallback {
+    public interface SetCallback {
         /**
          * @param newCount is guaranteed to be >= 0.
          */

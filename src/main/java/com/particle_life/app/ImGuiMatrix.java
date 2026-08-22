@@ -11,9 +11,9 @@ import imgui.ImVec2;
 import imgui.flag.ImGuiCol;
 import org.joml.Vector2i;
 
-class ImGuiMatrix {
+public class ImGuiMatrix {
 
-    interface SetCallback {
+    public interface SetCallback {
         /**
          * @param newValue is guaranteed to be in [-1, 1].
          */

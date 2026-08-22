@@ -13,26 +13,30 @@ public class Cursor {
     public double size = 0.1;
     public CursorShape shape;
 
-    public boolean isInside(Particle particle, boolean wrap) {
-        if (size == 0.0) return false;
+  public boolean isInside(Particle particle, boolean wrap) {
+    return isInside(particle.position, wrap);
+  }
 
-        Vector3d delta = new Vector3d(particle.position).sub(position);
+  public boolean isInside(Vector3d particlePosition, boolean wrap) {
+    if (size == 0.0) return false;
 
-        if (wrap) {
-            // wrapping the connection gives us the shortest possible distance
-            // assume periodic boundaries [0, 1)
-            // -> wrap connection on [-0.5, 0.5)
-            for (int i = 0; i < 3; i++) {
-                double val = delta.get(i);
-                val -= Math.floor(val + 0.5);
-                delta.setComponent(i, val);
-            }
-        }
+    Vector3d delta = new Vector3d(particlePosition).sub(position);
 
-        Vector3d deltaNormalized = delta.div(size);  // relative to cursor size
-
-        return shape.isInside(deltaNormalized);
+    if (wrap) {
+      // wrapping the connection gives us the shortest possible distance
+      // assume periodic boundaries [0, 1)
+      // -> wrap connection on [-0.5, 0.5)
+      for (int i = 0; i < 3; i++) {
+        double val = delta.get(i);
+        val -= Math.floor(val + 0.5);
+        delta.setComponent(i, val);
+      }
     }
+
+    Vector3d deltaNormalized = delta.div(size);  // relative to cursor size
+
+    return shape.isInside(deltaNormalized);
+  }
 
     public List<Particle> getSelection(Particle[] particles, boolean wrap) {
         List<Particle> selectedParticles = new ArrayList<>();
@@ -46,6 +50,19 @@ public class Cursor {
         int count = 0;
         for (Particle particle : particles) {
             if (isInside(particle, wrap)) count++;
+        }
+        return count;
+    }
+
+    /**
+     * Count particles under the cursor using snapshot position data (thread-safe for the render thread).
+     */
+    public int countSelection(double[] positions, int particleCount, boolean wrap) {
+        int count = 0;
+        for (int i = 0; i < particleCount; i++) {
+            int i3 = i * 3;
+            Vector3d pos = new Vector3d(positions[i3], positions[i3 + 1], positions[i3 + 2]);
+            if (isInside(pos, wrap)) count++;
         }
         return count;
     }

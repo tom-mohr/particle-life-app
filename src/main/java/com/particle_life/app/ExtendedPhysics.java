@@ -10,9 +10,9 @@ import java.util.Collections;
  * Provides additional functionality for the Physics class
  * that is optional or too arbitrary to be included in the actual physics package.
  */
-class ExtendedPhysics extends Physics {
+public class ExtendedPhysics extends Physics {
 
-    ExtendedPhysics(Accelerator accelerator, PositionSetter positionSetter, MatrixGenerator matrixGenerator, TypeSetter typeSetter) {
+    public ExtendedPhysics(Accelerator accelerator, PositionSetter positionSetter, MatrixGenerator matrixGenerator, TypeSetter typeSetter) {
         super(accelerator, positionSetter, matrixGenerator, typeSetter);
     }
 
