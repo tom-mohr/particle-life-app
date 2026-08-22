@@ -1,11 +1,13 @@
-package com.particle_life.app;
+package com.particle_life.app.gui;
 
-import com.particle_life.app.utils.ImGuiUtils;
 import imgui.ImGui;
 
-class GuiMainMenuBar {
+public class MainMenuBar {
 
-    static void draw(GuiContext ctx) {
+    private MainMenuBar() {
+    }
+
+    public static void draw(Context ctx) {
         if (ImGui.beginMenu("Menu")) {
             if (ImGui.menuItem("Saves##menu", "Ctrl+s")) {
                 InputShortcuts.openSaves(ctx);

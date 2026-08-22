@@ -1,13 +1,16 @@
-package com.particle_life.app;
+package com.particle_life.app.gui;
 
 import com.particle_life.app.utils.ImGuiUtils;
 import imgui.ImGui;
 import imgui.flag.ImGuiSliderFlags;
 import imgui.flag.ImGuiWindowFlags;
 
-class GuiGraphicsPanel {
+public class GraphicsPanel {
 
-    static void draw(GuiContext ctx) {
+    private GraphicsPanel() {
+    }
+
+    public static void draw(Context ctx) {
         if (!ctx.showGraphicsWindow.get()) return;
 
         ImGui.setNextWindowSize(400, 300);

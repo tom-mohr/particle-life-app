@@ -1,4 +1,4 @@
-package com.particle_life.app;
+package com.particle_life.app.gui;
 
 import com.particle_life.app.utils.ImGuiUtils;
 import imgui.ImGui;
@@ -7,9 +7,12 @@ import imgui.flag.ImGuiInputTextFlags;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImInt;
 
-class GuiPhysicsPanel {
+public class PhysicsPanel {
 
-    static void draw(GuiContext ctx) {
+    private PhysicsPanel() {
+    }
+
+    public static void draw(Context ctx) {
         ImGui.setNextWindowSize(-1, -1, imgui.flag.ImGuiCond.FirstUseEver);
         ImGui.setNextWindowPos(ctx.width, ctx.height, imgui.flag.ImGuiCond.Always, 1.0f, 1.0f);
         ImGui.getStyle().setWindowMenuButtonPosition(ImGuiDir.Right);

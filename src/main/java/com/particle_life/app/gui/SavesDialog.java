@@ -1,5 +1,6 @@
-package com.particle_life.app;
+package com.particle_life.app.gui;
 
+import com.particle_life.app.ImGuiCardView;
 import com.particle_life.app.utils.ImGuiUtils;
 import imgui.ImGui;
 import imgui.flag.ImGuiInputTextFlags;
@@ -11,9 +12,12 @@ import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Comparator;
 
-class GuiSavesDialog {
+public class SavesDialog {
 
-    static void draw(GuiContext ctx) {
+    private SavesDialog() {
+    }
+
+    public static void draw(Context ctx) {
         if (ctx.showSavesPopup.get()) ImGui.openPopup("Saves");
         ImGui.setNextWindowSize(480, -1, imgui.flag.ImGuiCond.Always);
         ImGui.setNextWindowPos(ctx.width / 2f, ctx.height / 2f, imgui.flag.ImGuiCond.Appearing, 0.5f, 0.5f);

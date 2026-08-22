@@ -1,10 +1,13 @@
-package com.particle_life.app;
+package com.particle_life.app.gui;
 
 import imgui.ImGui;
 
-class GuiPhysicsNotReactingDialog {
+public class PhysicsNotReactingDialog {
 
-    static void draw(GuiContext ctx) {
+    private PhysicsNotReactingDialog() {
+    }
+
+    public static void draw(Context ctx) {
         long physicsNotReactingSince = System.currentTimeMillis() - ctx.physicsSnapshot.snapshotTime;
         boolean physicsNotReacting = physicsNotReactingSince > ctx.physicsNotReactingThreshold;
         if (physicsNotReacting) ImGui.openPopup("Not reacting");

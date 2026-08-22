@@ -1,5 +1,6 @@
 package com.particle_life.app;
 
+import com.particle_life.app.gui.*;
 import com.particle_life.app.color.Palette;
 import com.particle_life.app.color.PalettesProvider;
 import com.particle_life.app.cursors.*;
@@ -134,7 +135,7 @@ public class Main extends App {
     private MultisampledFramebuffer worldTexture;  // particles
     private MultisampledFramebuffer cursorTexture;  // cursor
 
-    private final GuiContext guiContext = new GuiContext();
+    private final Context guiContext = new Context();
     private SaveLoadService saveLoadService;
 
     @Override
@@ -488,22 +489,22 @@ public class Main extends App {
                             | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.MenuBar)) {
                 ImGui.popStyleVar(3);
                 if (ImGui.beginMenuBar()) {
-                    GuiMainMenuBar.draw(guiContext);
+                    MainMenuBar.draw(guiContext);
                     ImGui.endMenuBar();
                 }
             }
             ImGui.end();
 
-            GuiParticlesPanel.draw(guiContext);
-            GuiPhysicsPanel.draw(guiContext);
-            GuiCursorPanel.draw(guiContext);
+            ParticlesPanel.draw(guiContext);
+            PhysicsPanel.draw(guiContext);
+            CursorPanel.draw(guiContext);
         }
 
-        GuiGraphicsPanel.draw(guiContext);
-        GuiPhysicsNotReactingDialog.draw(guiContext);
-        GuiControlsDialog.draw(guiContext);
-        GuiAboutDialog.draw(guiContext);
-        GuiSavesDialog.draw(guiContext);
+        GraphicsPanel.draw(guiContext);
+        PhysicsNotReactingDialog.draw(guiContext);
+        ControlsDialog.draw(guiContext);
+        AboutDialog.draw(guiContext);
+        SavesDialog.draw(guiContext);
 
         if (requestedSaveImage) {
             final int[] image = renderParticlesToImage();

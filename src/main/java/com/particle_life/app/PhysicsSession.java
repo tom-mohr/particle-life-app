@@ -10,7 +10,7 @@ import com.particle_life.backend.TypeSetter;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-class PhysicsSession {
+public class PhysicsSession {
 
     ExtendedPhysics physics;
     Loop loop;
@@ -65,7 +65,7 @@ class PhysicsSession {
         }
     }
 
-    static void setTypesFromSelection(ExtendedPhysics physics, TypeSetter typeSetter) {
+    public static void setTypesFromSelection(ExtendedPhysics physics, TypeSetter typeSetter) {
         TypeSetter previousTypeSetter = physics.typeSetter;
         physics.typeSetter = typeSetter;
         physics.setTypes();

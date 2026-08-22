@@ -1,5 +1,8 @@
-package com.particle_life.app;
+package com.particle_life.app.gui;
 
+import com.particle_life.app.ImGuiBarGraph;
+import com.particle_life.app.ImGuiMatrix;
+import com.particle_life.app.MatrixParser;
 import com.particle_life.app.utils.ImGuiUtils;
 import com.particle_life.backend.Matrix;
 import com.particle_life.backend.MatrixGenerator;
@@ -13,9 +16,12 @@ import imgui.type.ImInt;
 
 import java.util.Arrays;
 
-class GuiParticlesPanel {
+public class ParticlesPanel {
 
-    static void draw(GuiContext ctx) {
+    private ParticlesPanel() {
+    }
+
+    public static void draw(Context ctx) {
         ImGui.setNextWindowSize(-1, -1, imgui.flag.ImGuiCond.FirstUseEver);
         ImGui.setNextWindowPos(ctx.width, 0, imgui.flag.ImGuiCond.Always, 1.0f, 0.0f);
         ImGui.getStyle().setWindowMenuButtonPosition(ImGuiDir.Right);

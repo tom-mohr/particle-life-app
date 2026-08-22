@@ -4,22 +4,22 @@ import com.particle_life.backend.LoadDistributor;
 import com.particle_life.backend.Particle;
 import com.particle_life.backend.PhysicsSettings;
 
-class PhysicsSnapshot {
+public class PhysicsSnapshot {
 
     private static final int PREFERRED_NUMBER_OF_THREADS = 12;
 
-    double[] positions;
-    double[] velocities;
-    int[] types;
+    public double[] positions;
+    public double[] velocities;
+    public int[] types;
 
-    PhysicsSettings settings;
-    int particleCount;
-    int[] typeCount;
+    public PhysicsSettings settings;
+    public int particleCount;
+    public int[] typeCount;
 
     /**
      * unix timestamp from when this snapshot was taken (milliseconds)
      */
-    long snapshotTime;
+    public long snapshotTime;
 
     void take(ExtendedPhysics p, LoadDistributor loadDistributor) {
 

@@ -1,46 +1,52 @@
-package com.particle_life.app;
+package com.particle_life.app.gui;
 
-class InputShortcuts {
+import com.particle_life.app.InputState;
+import com.particle_life.app.PhysicsSession;
 
-    static void setPositions(GuiContext ctx) {
+public class InputShortcuts {
+
+    private InputShortcuts() {
+    }
+
+    public static void setPositions(Context ctx) {
         ctx.loop.enqueue(ctx.physics::setPositions);
     }
 
-    static void setColors(GuiContext ctx) {
+    public static void setColors(Context ctx) {
         ctx.loop.enqueue(() -> PhysicsSession.setTypesFromSelection(ctx.physics, ctx.typeSetters.getActive()));
     }
 
-    static void generateMatrix(GuiContext ctx) {
+    public static void generateMatrix(Context ctx) {
         ctx.loop.enqueue(ctx.physics::generateMatrix);
     }
 
-    static void toggleWrap(GuiContext ctx) {
+    public static void toggleWrap(Context ctx) {
         final boolean newWrap = !ctx.settings.wrap;
         ctx.loop.enqueue(() -> ctx.physics.settings.wrap = newWrap);
     }
 
-    static void togglePause(GuiContext ctx) {
+    public static void togglePause(Context ctx) {
         ctx.loop.pause ^= true;
     }
 
-    static void toggleTraces(GuiContext ctx) {
+    public static void toggleTraces(Context ctx) {
         ctx.traces ^= true;
     }
 
-    static void openSaves(GuiContext ctx) {
+    public static void openSaves(Context ctx) {
         ctx.showSavesPopup.set(true);
         ctx.requestedSaveCardsLoading.set(true);
     }
 
-    static void openGraphics(GuiContext ctx) {
+    public static void openGraphics(Context ctx) {
         ctx.showGraphicsWindow.set(true);
     }
 
-    static void toggleGraphics(GuiContext ctx) {
+    public static void toggleGraphics(Context ctx) {
         ctx.showGraphicsWindow.set(!ctx.showGraphicsWindow.get());
     }
 
-    static void handleKey(String keyName, GuiContext ctx, InputState input) {
+    public static void handleKey(String keyName, Context ctx, InputState input) {
         input.onKeyPressed(keyName);
 
         if (input.isControlPressed()) {

@@ -1,4 +1,4 @@
-package com.particle_life.app;
+package com.particle_life.app.gui;
 
 import com.particle_life.app.cursors.CursorAction;
 import com.particle_life.app.utils.ImGuiUtils;
@@ -10,9 +10,12 @@ import imgui.flag.ImGuiTableFlags;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImInt;
 
-class GuiCursorPanel {
+public class CursorPanel {
 
-    static void draw(GuiContext ctx) {
+    private CursorPanel() {
+    }
+
+    public static void draw(Context ctx) {
         ImGui.setNextWindowSize(290, 250, imgui.flag.ImGuiCond.FirstUseEver);
         ImGui.setNextWindowPos(0, ctx.height, imgui.flag.ImGuiCond.Always, 0.0f, 1.0f);
         ImGui.getStyle().setWindowMenuButtonPosition(ImGuiDir.Left);

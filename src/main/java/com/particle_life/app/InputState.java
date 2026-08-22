@@ -1,38 +1,38 @@
 package com.particle_life.app;
 
-class InputState {
+public class InputState {
 
-    boolean draggingShift = false;
-    boolean leftDraggingParticles = false;
-    boolean rightDraggingParticles = false;
-    boolean leftPressed = false;
-    boolean rightPressed = false;
-    boolean upPressed = false;
-    boolean downPressed = false;
-    boolean wPressed = false;
-    boolean aPressed = false;
-    boolean sPressed = false;
-    boolean dPressed = false;
-    boolean leftShiftPressed = false;
-    boolean rightShiftPressed = false;
-    boolean leftControlPressed = false;
-    boolean rightControlPressed = false;
-    boolean leftAltPressed = false;
-    boolean rightAltPressed = false;
+    public boolean draggingShift = false;
+    public boolean leftDraggingParticles = false;
+    public boolean rightDraggingParticles = false;
+    public boolean leftPressed = false;
+    public boolean rightPressed = false;
+    public boolean upPressed = false;
+    public boolean downPressed = false;
+    public boolean wPressed = false;
+    public boolean aPressed = false;
+    public boolean sPressed = false;
+    public boolean dPressed = false;
+    public boolean leftShiftPressed = false;
+    public boolean rightShiftPressed = false;
+    public boolean leftControlPressed = false;
+    public boolean rightControlPressed = false;
+    public boolean leftAltPressed = false;
+    public boolean rightAltPressed = false;
 
-    boolean isControlPressed() {
+    public boolean isControlPressed() {
         return leftControlPressed || rightControlPressed;
     }
 
-    boolean isShiftPressed() {
+    public boolean isShiftPressed() {
         return leftShiftPressed || rightShiftPressed;
     }
 
-    boolean isAltPressed() {
+    public boolean isAltPressed() {
         return leftAltPressed || rightAltPressed;
     }
 
-    void onKeyPressed(String keyName) {
+    public void onKeyPressed(String keyName) {
         switch (keyName) {
             case "LEFT" -> leftPressed = true;
             case "RIGHT" -> rightPressed = true;
@@ -51,7 +51,7 @@ class InputState {
         }
     }
 
-    void onKeyReleased(String keyName) {
+    public void onKeyReleased(String keyName) {
         switch (keyName) {
             case "LEFT" -> leftPressed = false;
             case "RIGHT" -> rightPressed = false;
@@ -70,7 +70,7 @@ class InputState {
         }
     }
 
-    void clearControlAndS() {
+    public void clearControlAndS() {
         leftControlPressed = false;
         rightControlPressed = false;
         sPressed = false;

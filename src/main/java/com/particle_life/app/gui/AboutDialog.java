@@ -1,11 +1,15 @@
-package com.particle_life.app;
+package com.particle_life.app.gui;
 
+import com.particle_life.app.utils.ImGuiUtils;
 import imgui.ImGui;
 import imgui.flag.ImGuiWindowFlags;
 
-class GuiAboutDialog {
+public class AboutDialog {
 
-    static void draw(GuiContext ctx) {
+    private AboutDialog() {
+    }
+
+    public static void draw(Context ctx) {
         if (!ctx.showAboutWindow.get()) return;
 
         ImGui.setNextWindowPos(ctx.width / 2f, ctx.height / 2f, imgui.flag.ImGuiCond.FirstUseEver, 0.5f, 0.5f);
@@ -14,7 +18,7 @@ class GuiAboutDialog {
             ImGui.text("By Tom Mohr.");
             ImGui.text("GPL-3.0 License.");
             ImGui.dummy(0, 10);
-            if (com.particle_life.app.utils.ImGuiUtils.link("particle-life.com", "https://particle-life.com")) {
+            if (ImGuiUtils.link("particle-life.com", "https://particle-life.com")) {
                 ctx.setFullscreen.accept(false);
             }
             ImGui.dummy(0, 10);

@@ -1,11 +1,14 @@
-package com.particle_life.app;
+package com.particle_life.app.gui;
 
 import imgui.ImGui;
 import imgui.flag.ImGuiWindowFlags;
 
-class GuiControlsDialog {
+public class ControlsDialog {
 
-    static void draw(GuiContext ctx) {
+    private ControlsDialog() {
+    }
+
+    public static void draw(Context ctx) {
         if (!ctx.showControlsWindow.get()) return;
 
         ImGui.setNextWindowPos(ctx.width / 2f, ctx.height / 2f, imgui.flag.ImGuiCond.FirstUseEver, 0.5f, 0.5f);
