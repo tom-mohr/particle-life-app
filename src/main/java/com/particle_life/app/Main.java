@@ -1,6 +1,5 @@
 package com.particle_life.app;
 
-import com.particle_life.app.color.NaturalRainbowPalette;
 import com.particle_life.app.color.Palette;
 import com.particle_life.app.color.PalettesProvider;
 import com.particle_life.app.cursors.*;
@@ -20,7 +19,6 @@ import imgui.type.ImBoolean;
 import imgui.type.ImFloat;
 import imgui.type.ImInt;
 import imgui.type.ImString;
-import org.joml.Matrix4d;
 import org.joml.Vector2d;
 import org.joml.Vector3d;
 import org.lwjgl.Version;
@@ -98,7 +96,6 @@ public class Main extends App {
     private SelectionManager<CursorAction> cursorActions2;
 
     // helper classes
-    private final Matrix4d transform = new Matrix4d();
     private final ParticleRenderer particleRenderer = new ParticleRenderer();
     private final ImGuiImplGl3 imGuiGl3 = new ImGuiImplGl3();
 
@@ -125,11 +122,9 @@ public class Main extends App {
 
     // particle rendering: controls
     private boolean traces = false;
-    private final Vector2d camPos = new Vector2d(0.5, 0.5);  // world center
-    private final Vector2d camPosGoal = new Vector2d(camPos);
-    private double camSize = 1.0;
-    private double camSizeGoal = camSize;
-    private final double MAX_CAM_SIZE = 20;
+    private final CameraController camera = new CameraController();
+    private final WorldRenderer worldRenderer = new WorldRenderer();
+    private static final double MAX_CAM_SIZE = 20;
     private final InputState input = new InputState();
 
     // GUI: constants that control how the GUI behaves
@@ -149,7 +144,6 @@ public class Main extends App {
     private ImGuiCardView.Card[] saveCards = new ImGuiCardView.Card[0];
     private final AtomicBoolean requestedSaveCardsLoading = new AtomicBoolean(true);
     private int[] saveImage = null;
-    private static final int SAVE_IMAGE_SIZE = 256;
     private boolean requestedSaveImage = false;
     private File selectedSaveFile = null;
 
@@ -294,10 +288,10 @@ public class Main extends App {
         guiContext.closeApp = this::close;
         guiContext.setFullscreen = this::setFullscreen;
         guiContext.isFullscreen = this::isFullscreen;
-        guiContext.zoomIn = () -> camSizeGoal /= Math.pow(appSettings.zoomStepFactor, 2);
+        guiContext.zoomIn = () -> camera.camSizeGoal /= Math.pow(appSettings.zoomStepFactor, 2);
         guiContext.zoomOut = () -> {
-            camSizeGoal *= Math.pow(appSettings.zoomStepFactor, 2);
-            camSizeGoal = Math.min(camSizeGoal, MAX_CAM_SIZE);
+            camera.camSizeGoal *= Math.pow(appSettings.zoomStepFactor, 2);
+            camera.camSizeGoal = Math.min(camera.camSizeGoal, MAX_CAM_SIZE);
         };
         guiContext.appVersion = APP_VERSION;
         guiContext.javaHome = JAVA_HOME;
@@ -387,108 +381,25 @@ public class Main extends App {
             renderClock.tick();
             updateCanvas();
 
-            int texWidth, texHeight;
+            WorldRenderer.RenderResult renderResult = worldRenderer.render(
+                    worldTexture,
+                    cursorTexture,
+                    particleRenderer,
+                    shaders.getActive(),
+                    cursorShader,
+                    cursor,
+                    appSettings,
+                    settings,
+                    palettes.getActive(),
+                    camera.camPos,
+                    camera.camSize,
+                    width,
+                    height,
+                    traces
+            );
 
-            // todo: make this part look less like magic
-            int desiredTexSize = (int) Math.round(Math.min(width, height) / camSize);
-            if (camSize > 1) {
-                texWidth = desiredTexSize;
-                texHeight = desiredTexSize;
-                new NormalizedDeviceCoordinates(
-                        new Vector2d(0.5, 0.5),  // center camera
-                        new Vector2d(1, 1)  // capture whole screen
-                ).getMatrix(transform);
-            } else {
-                if (settings.wrap) {
-                    texWidth = Math.min(desiredTexSize, width);
-                    texHeight = Math.min(desiredTexSize, height);
-                } else {
-                    texWidth = width;
-                    texHeight = height;
-                }
-                Vector2d texCamSize = new Vector2d(camSize);
-                if (width > height) texCamSize.x *= (double) texWidth / texHeight;
-                else if (height > width) texCamSize.y *= (double) texHeight / texWidth;
-                new NormalizedDeviceCoordinates(
-                        new Vector2d(texCamSize.x / 2, texCamSize.y / 2),
-                        texCamSize
-                ).getMatrix(transform);
-            }
-
-            worldTexture.ensureSize(texWidth, texHeight, 16);
-
-            ParticleShader particleShader = shaders.getActive();
-
-            // set shader variables
-            particleShader.use();
-
-            particleShader.setTime(System.nanoTime() / 1000_000_000.0f);
-            particleShader.setPalette(PaletteUtils.getColors(settings.matrix.size(), palettes.getActive()));
-            particleShader.setTransform(transform);
-
-            CamOperations cam = new CamOperations(camPos, camSize, width, height);
-            CamOperations.BoundingBox camBox = cam.getBoundingBox();
-            if (camSize > 1) {
-                particleShader.setCamTopLeft(0, 0);
-            } else {
-                particleShader.setCamTopLeft((float) camBox.left, (float) camBox.top);
-            }
-            particleShader.setWrap(settings.wrap);
-            particleShader.setSize(appSettings.particleSize * 2 * (float) settings.rmax
-                    * (appSettings.keepParticleSizeIndependentOfZoom ? (float) camSize : 1));
-
-            if (!traces) worldTexture.clear(0, 0, 0, 0);
-
-            glEnable(GL_BLEND);
-            particleShader.blendMode.glBlendFunc();
-
-            glDisable(GL_SCISSOR_TEST);
-            glViewport(0, 0, texWidth, texHeight);
-
-            glBindFramebuffer(GL_FRAMEBUFFER, worldTexture.framebufferMulti);
-            particleRenderer.drawParticles();
-            worldTexture.toSingleSampled();
-
-            glBindTexture(GL_TEXTURE_2D, worldTexture.textureSingle);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, settings.wrap ? GL_REPEAT : GL_CLAMP_TO_BORDER);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, settings.wrap ? GL_REPEAT : GL_CLAMP_TO_BORDER);
-            glBindTexture(GL_TEXTURE_2D, 0);
-
-            // render cursor onto separate framebuffer
-            cursorTexture.ensureSize(width, height, 16);
-            cursorTexture.clear(0, 0, 0, 0);
-            if (appSettings.showCursor) {
-                new NormalizedDeviceCoordinates(
-                        camPos,
-                        cam.getCamDimensions()
-                ).getMatrix(transform);
-                transform.translate(cursor.position);
-                transform.scale(cursor.size);
-
-                glViewport(0, 0, width, height);
-
-                glBindFramebuffer(GL_FRAMEBUFFER, cursorTexture.framebufferMulti);
-
-                cursorShader.use();
-                cursorShader.setTransform(transform);
-                cursor.draw();
-            }
-            // convert multisampled texture to single-sampled texture
-            cursorTexture.toSingleSampled();
-
-            // render GUI
-            // Note: Any Dear ImGui code must go between ImGui.newFrame() and ImGui.render().
             ImGui.newFrame();
-            if (camSize > 1) {
-                ImGui.getBackgroundDrawList().addImage(worldTexture.textureSingle, 0, 0, width, height,
-                        (float) camBox.left, (float) camBox.top,
-                        (float) camBox.right, (float) camBox.bottom);
-            } else {
-                ImGui.getBackgroundDrawList().addImage(worldTexture.textureSingle, 0, 0, width, height,
-                        0, 0, (float) width / texWidth, (float) height / texHeight);
-            }
-            ImGui.getBackgroundDrawList().addImage(cursorTexture.textureSingle, 0, 0, width, height,
-                    0, 0, 1, 1);
+            WorldRenderer.drawBackgroundImages(worldTexture, cursorTexture, renderResult, camera.camSize, width, height);
 
             buildGui();
             ImGui.render();
@@ -514,27 +425,11 @@ public class Main extends App {
      * Render particles, cursor etc., i.e. everything except the GUI elements.
      */
     private void updateCanvas() {
-        // util object for later use
-        ScreenCoordinates screen = new ScreenCoordinates(camPos, camSize, width, height);
+        ScreenCoordinates screen = new ScreenCoordinates(camera.camPos, camera.camSize, width, height);
 
-        // set cursor position and size
         cursor.position.set(screen.screenToWorld(new Vector2d(mouseX, mouseY)));
 
-        if (input.draggingShift) {
-            new CamOperations(camPos, camSize, width, height)
-                    .dragCam(new Vector2d(pmouseX, pmouseY), new Vector2d(mouseX, mouseY));
-            camPosGoal.set(camPos);  // don't use smoothing while dragging
-        }
-
-        double camMovementStepSize = appSettings.camMovementSpeed * camSize;
-        camMovementStepSize *= renderClock.getDtMillis() / 1000.0;  // keep constant speed regardless of framerate
-        if (input.leftPressed || input.aPressed) camPosGoal.add(-camMovementStepSize, 0.0);
-        if (input.rightPressed || input.dPressed) camPosGoal.add(camMovementStepSize, 0.0);
-        if (input.upPressed || input.wPressed) camPosGoal.add(0.0, -camMovementStepSize);
-        if (input.downPressed || input.sPressed) camPosGoal.add(0.0, camMovementStepSize);
-
-        camPos.lerp(camPosGoal, appSettings.shiftSmoothness);
-        camSize = MathUtils.lerp(camSize, camSizeGoal, appSettings.zoomSmoothness);
+        camera.update(appSettings, renderClock, input, width, height, pmouseX, pmouseY, mouseX, mouseY);
 
         // count particles under cursor from snapshot data (avoids cross-thread access to physics.particles)
         if (physicsSnapshot.positions != null) {
@@ -708,8 +603,6 @@ public class Main extends App {
 
 
     private int[] renderParticlesToImage() {
-
-        // get shader
         ParticleShader particleShader;
         String defaultShaderName = "default";
         if (shaders.hasName(defaultShaderName)) {
@@ -717,41 +610,7 @@ public class Main extends App {
         } else {
             particleShader = shaders.getActive();
         }
-
-        glEnable(GL_BLEND);
-        particleShader.blendMode.glBlendFunc();
-
-        // set shader variables
-        particleShader.use();
-        particleShader.setTime(0);
-        particleShader.setPalette(PaletteUtils.getColors(
-                settings.matrix.size(),
-                new NaturalRainbowPalette()));
-        particleShader.setTransform(new NormalizedDeviceCoordinates(
-                new Vector2d(0.5, 0.5),  // center camera
-                new Vector2d(1, 1)  // capture whole world
-        ).getMatrix());
-        particleShader.setSize(0.015f);
-        particleShader.setCamTopLeft(0, 0);
-        particleShader.setWrap(false);
-
-        int[] pixels = new int[SAVE_IMAGE_SIZE * SAVE_IMAGE_SIZE];
-        MultisampledFramebuffer tex = new MultisampledFramebuffer();
-        tex.init();
-        tex.ensureSize(SAVE_IMAGE_SIZE, SAVE_IMAGE_SIZE, 16);
-        tex.clear(0, 0, 0, 0);
-        glViewport(0, 0, SAVE_IMAGE_SIZE, SAVE_IMAGE_SIZE);
-        glBindFramebuffer(GL_FRAMEBUFFER, tex.framebufferMulti);
-        particleRenderer.drawParticles();
-        tex.toSingleSampled();
-        glBindFramebuffer(GL_FRAMEBUFFER, tex.framebufferSingle);
-        glReadPixels(0, 0, SAVE_IMAGE_SIZE, SAVE_IMAGE_SIZE, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-
-        // unbind, delete
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        tex.delete();
-
-        return pixels;
+        return SaveThumbnailRenderer.render(particleRenderer, particleShader, settings);
     }
 
 
@@ -790,12 +649,12 @@ public class Main extends App {
                     zip.putNextEntry(new ZipEntry("img.png"));
                     // convert to png format
                     BufferedImage bufferedImage = new BufferedImage(
-                            SAVE_IMAGE_SIZE, SAVE_IMAGE_SIZE,
+                            SaveThumbnailRenderer.SAVE_IMAGE_SIZE, SaveThumbnailRenderer.SAVE_IMAGE_SIZE,
                             BufferedImage.TYPE_INT_ARGB
                     );
                     bufferedImage.setRGB(
-                            0, 0, SAVE_IMAGE_SIZE, SAVE_IMAGE_SIZE,
-                            saveImage, 0, SAVE_IMAGE_SIZE
+                            0, 0, SaveThumbnailRenderer.SAVE_IMAGE_SIZE, SaveThumbnailRenderer.SAVE_IMAGE_SIZE,
+                            saveImage, 0, SaveThumbnailRenderer.SAVE_IMAGE_SIZE
                     );
                     ImageIO.write(bufferedImage, "png", zip);
                     zip.closeEntry();
@@ -875,14 +734,7 @@ public class Main extends App {
     }
 
     private void resetCamera(boolean fit) {
-        if (settings.wrap) camPos.sub(Math.floor(camPos.x), Math.floor(camPos.y));  // remove periodic offset
-        camPosGoal.set(0.5, 0.5);  // world center
-        camSizeGoal = 1;
-
-        if (fit) {
-            // zoom to fit larger dimension
-            camSizeGoal = (double) Math.min(width, height) / Math.max(width, height);
-        }
+        camera.reset(settings, width, height, fit);
     }
 
     @Override
@@ -936,16 +788,7 @@ public class Main extends App {
             // change rmax
             loop.enqueue(() -> physics.settings.rmax *= Math.pow(1.2, -y));
         } else {
-            // change camera zoom
-
-            double factor = Math.pow(appSettings.zoomStepFactor, -y);
-
-            CamOperations cam = new CamOperations(camPosGoal, camSizeGoal, width, height);
-            cam.zoom(
-                    mouseX, mouseY, // zoom in on mouse
-                    Math.min(camSizeGoal * factor, MAX_CAM_SIZE)
-            );  // this already modifies camPosGoal
-            camSizeGoal = cam.camSize;
+            camera.scrollZoom(appSettings, mouseX, mouseY, width, height, y, MAX_CAM_SIZE);
         }
     }
 
