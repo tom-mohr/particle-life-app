@@ -1,6 +1,5 @@
 package com.particle_life.app;
 
-import com.particle_life.app.color.Color;
 import com.particle_life.app.color.NaturalRainbowPalette;
 import com.particle_life.app.color.Palette;
 import com.particle_life.app.color.PalettesProvider;
@@ -103,6 +102,7 @@ public class Main extends App {
     private final ParticleRenderer particleRenderer = new ParticleRenderer();
     private final ImGuiImplGl3 imGuiGl3 = new ImGuiImplGl3();
 
+    private final PhysicsSession physicsSession = new PhysicsSession();
     private ExtendedPhysics physics;
     private Loop loop;
     /**
@@ -115,7 +115,7 @@ public class Main extends App {
      */
     private PhysicsSnapshot physicsSnapshot;
     private LoadDistributor physicsSnapshotLoadDistributor;  // speed up taking snapshots with parallelization
-    public AtomicBoolean newSnapshotAvailable = new AtomicBoolean(false);
+    private final AtomicBoolean newSnapshotAvailable = physicsSession.newSnapshotAvailable;
 
     // local copy of snapshot:
     private PhysicsSettings settings;
@@ -130,23 +130,7 @@ public class Main extends App {
     private double camSize = 1.0;
     private double camSizeGoal = camSize;
     private final double MAX_CAM_SIZE = 20;
-    boolean draggingShift = false;
-    boolean leftDraggingParticles = false;  // dragging with left mouse button
-    boolean rightDraggingParticles = false;  // dragging with right mouse button
-    boolean leftPressed = false;
-    boolean rightPressed = false;
-    boolean upPressed = false;
-    boolean downPressed = false;
-    boolean wPressed = false;
-    boolean aPressed = false;
-    boolean sPressed = false;
-    boolean dPressed = false;
-    boolean leftShiftPressed = false;
-    boolean rightShiftPressed = false;
-    boolean leftControlPressed = false;
-    boolean rightControlPressed = false;
-    boolean leftAltPressed = false;
-    boolean rightAltPressed = false;
+    private final InputState input = new InputState();
 
     // GUI: constants that control how the GUI behaves
     private long physicsNotReactingThreshold = 3000;  // time in milliseconds
@@ -243,9 +227,15 @@ public class Main extends App {
             shaders.setActive(0);
         }
 
-        createPhysics();
-        loop = new Loop();
-        loop.start(this::updatePhysics);
+        physicsSession.create(
+                positionSetters.getActive(),
+                matrixGenerators.getActive(),
+                typeSetters.getActive());
+        physics = physicsSession.physics;
+        physicsSnapshot = physicsSession.physicsSnapshot;
+        physicsSnapshotLoadDistributor = physicsSession.physicsSnapshotLoadDistributor;
+        physicsSession.start(this::updatePhysics);
+        loop = physicsSession.loop;
 
         // set default selection for palette
         if (palettes.hasName(appSettings.palette)) {
@@ -255,38 +245,18 @@ public class Main extends App {
         // generate offscreen frame buffer to render particles to a multisampled texture
         // and also a simple texture for converting the multisampled texture to a single-sampled texture
         // (this is necessary because ImGui can't handle multisampled textures in the drawlist)
-        worldTexture = new MultisampledFramebuffer();
-        worldTexture.init();
-        glBindTexture(GL_TEXTURE_2D, worldTexture.textureSingle);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glBindTexture(GL_TEXTURE_2D, 0);
+        worldTexture = MultisampledFramebuffer.createLinearFiltered();
 
         // create offscreen framebuffer for cursor rendering
-        cursorTexture = new MultisampledFramebuffer();
-        cursorTexture.init();
-        glBindTexture(GL_TEXTURE_2D, cursorTexture.textureSingle);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glBindTexture(GL_TEXTURE_2D, 0);
+        cursorTexture = MultisampledFramebuffer.createLinearFiltered();
     }
 
-    private void createPhysics() {
-        Accelerator accelerator = (a, pos) -> {
-            double beta = 0.3;
-            double dist = pos.length();
-            double force = dist < beta ? (dist / beta - 1) : a * (1 - Math.abs(1 + beta - 2 * dist) / (1 - beta));
-            return pos.mul(force / dist);
-        };
-        physics = new ExtendedPhysics(
-                accelerator,
-                positionSetters.getActive(),
-                matrixGenerators.getActive(),
-                typeSetters.getActive());
-        physicsSnapshot = new PhysicsSnapshot();
-        physicsSnapshotLoadDistributor = new LoadDistributor();
-        physicsSnapshot.take(physics, physicsSnapshotLoadDistributor);
-        newSnapshotAvailable.set(true);
+    private void restartPhysics() {
+        physicsSession.restart(this::updatePhysics);
+        physics = physicsSession.physics;
+        physicsSnapshot = physicsSession.physicsSnapshot;
+        physicsSnapshotLoadDistributor = physicsSession.physicsSnapshotLoadDistributor;
+        loop = physicsSession.loop;
     }
 
     private void updatePhysics(double realDt) {
@@ -328,11 +298,7 @@ public class Main extends App {
             }
         }
 
-        if (!loop.stop(1000)) {
-            loop.kill();
-            physics.kill();
-            physicsSnapshotLoadDistributor.kill();
-        }
+        physicsSession.stopAndKill();
         imGuiGl3.dispose();
     }
 
@@ -378,7 +344,7 @@ public class Main extends App {
             particleShader.use();
 
             particleShader.setTime(System.nanoTime() / 1000_000_000.0f);
-            particleShader.setPalette(getColorsFromPalette(settings.matrix.size(), palettes.getActive()));
+            particleShader.setPalette(PaletteUtils.getColors(settings.matrix.size(), palettes.getActive()));
             particleShader.setTransform(transform);
 
             CamOperations cam = new CamOperations(camPos, camSize, width, height);
@@ -475,7 +441,7 @@ public class Main extends App {
         // set cursor position and size
         cursor.position.set(screen.screenToWorld(new Vector2d(mouseX, mouseY)));
 
-        if (draggingShift) {
+        if (input.draggingShift) {
             new CamOperations(camPos, camSize, width, height)
                     .dragCam(new Vector2d(pmouseX, pmouseY), new Vector2d(mouseX, mouseY));
             camPosGoal.set(camPos);  // don't use smoothing while dragging
@@ -483,46 +449,24 @@ public class Main extends App {
 
         double camMovementStepSize = appSettings.camMovementSpeed * camSize;
         camMovementStepSize *= renderClock.getDtMillis() / 1000.0;  // keep constant speed regardless of framerate
-        if (leftPressed || aPressed) camPosGoal.add(-camMovementStepSize, 0.0);
-        if (rightPressed || dPressed) camPosGoal.add(camMovementStepSize, 0.0);
-        if (upPressed || wPressed) camPosGoal.add(0.0, -camMovementStepSize);
-        if (downPressed || sPressed) camPosGoal.add(0.0, camMovementStepSize);
+        if (input.leftPressed || input.aPressed) camPosGoal.add(-camMovementStepSize, 0.0);
+        if (input.rightPressed || input.dPressed) camPosGoal.add(camMovementStepSize, 0.0);
+        if (input.upPressed || input.wPressed) camPosGoal.add(0.0, -camMovementStepSize);
+        if (input.downPressed || input.sPressed) camPosGoal.add(0.0, camMovementStepSize);
 
         camPos.lerp(camPosGoal, appSettings.shiftSmoothness);
         camSize = MathUtils.lerp(camSize, camSizeGoal, appSettings.zoomSmoothness);
 
-        // count particles under cursor
-        {
-            try {
-                cursorParticleCount = cursor.countSelection(physics.particles, physics.settings.wrap);
-            } catch (NullPointerException e) {
-                e.printStackTrace();
-                /*
-                 The particle array might be null if the physics thread
-                 replaces the particle array while this executes
-                 (e.g. if the particle count is changed).
-                 I admit that this is not a clean solution, but anything else
-                 would have required too many changes to the code
-                 base, i.e. would have been overkill for this simple task.
-                 For example, the following would have been a clean solution:
-                     Do proper triple buffering of the particle array.
-                     In physics thread:
-                         1. copy Physics.particles -> physicsSnapshot1.particles
-                     In main thread (here):
-                         1. copy physicsSnapshot1.particles -> physicsSnapshot2.particles
-                         2. upload physicsSnapshot1(or 2).particles -> GPU
-                     Then, physicsSnapshot2.particles could be used here for counting the selection without risk.
-                 Another clean solution would maybe be to declare Physics.particles as volatile?
-                 Currently, another safe way would be to use the following:
-                     loop.enqueue(() -> cursorParticleCount = cursor.countSelection(physics));
-                 But this would make the particle count laggy if the physics simulation is slow,
-                 and I find it a better user experience to have the particle count ALWAYS update in real time.
-                */
-            }
+        // count particles under cursor from snapshot data (avoids cross-thread access to physics.particles)
+        if (physicsSnapshot.positions != null) {
+            cursorParticleCount = cursor.countSelection(
+                    physicsSnapshot.positions,
+                    physicsSnapshot.particleCount,
+                    settings.wrap);
         }
 
         // cursor actions
-        if (leftDraggingParticles || rightDraggingParticles) {
+        if (input.leftDraggingParticles || input.rightDraggingParticles) {
 
             // need to copy for async access in loop.enqueue()
             final Cursor cursorCopy;
@@ -533,7 +477,7 @@ public class Main extends App {
             }
 
             // execute cursor action
-            SelectionManager<CursorAction> cursorActions = leftDraggingParticles ? cursorActions1 : cursorActions2;
+            SelectionManager<CursorAction> cursorActions = input.leftDraggingParticles ? cursorActions1 : cursorActions2;
             switch (cursorActions.getActive()) {
                 case MOVE -> {
                     final Vector3d dragStartWorld = screen.screenToWorld(pmouseX, pmouseY);  // where the dragging started
@@ -730,12 +674,7 @@ public class Main extends App {
                 ImGuiUtils.renderCombo("##colors", typeSetters);
                 ImGui.sameLine();
                 if (ImGui.button("Colors")) {
-                    loop.enqueue(() -> {
-                        TypeSetter previousTypeSetter = physics.typeSetter;
-                        physics.typeSetter = typeSetters.getActive();
-                        physics.setTypes();
-                        physics.typeSetter = previousTypeSetter;
-                    });
+                    loop.enqueue(() -> PhysicsSession.setTypesFromSelection(physics, typeSetters.getActive()));
                 }
                 ImGuiUtils.helpMarker("[c] Use this to set colors of particles without changing their position.");
 
@@ -1003,16 +942,7 @@ public class Main extends App {
             ImGui.text("Physics didn't react since %4.0f seconds.".formatted(physicsNotReactingSince / 1000.0));
 
             if (ImGui.button("Reset Physics")) {
-                if (!loop.stop(1000)) {
-                    // physics didn't finish in time
-                    loop.kill();
-                    physics.kill();
-                    physicsSnapshotLoadDistributor.kill();
-                }
-                // re-start loop and re-create physics with initial settings
-                createPhysics();
-                loop = new Loop();
-                loop.start(this::updatePhysics);
+                restartPhysics();
             }
 
             ImGui.endPopup();
@@ -1026,7 +956,7 @@ public class Main extends App {
                         [-]: zoom out
                         [z]: reset zoom
                         [Z]: reset zoom (fit window)
-                        [ESCAPE]: hide / show GUI GUI
+                        [ESCAPE]: hide / show GUI
                         [g]: show / hide graphics settings
                         [SPACE]: pause physics
                         [p]: set positions
@@ -1098,7 +1028,7 @@ public class Main extends App {
                         try {
                             Files.deleteIfExists(card.file.toPath());
                         } catch (IOException e) {
-                            this.error = e;
+                            reportError(e);
                         }
                         requestedSaveCardsLoading.set(true);
                     }
@@ -1157,7 +1087,7 @@ public class Main extends App {
         // set shader variables
         particleShader.use();
         particleShader.setTime(0);
-        particleShader.setPalette(getColorsFromPalette(
+        particleShader.setPalette(PaletteUtils.getColors(
                 settings.matrix.size(),
                 new NaturalRainbowPalette()));
         particleShader.setTransform(new NormalizedDeviceCoordinates(
@@ -1292,7 +1222,7 @@ public class Main extends App {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            reportError(e);
         }
         requestedSaveCardsLoading.set(true);
     }
@@ -1342,9 +1272,25 @@ public class Main extends App {
                 }
                 zip.closeEntry();
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+            physics.ensureTypes();
+            validateLoadedState();
+        } catch (IOException | IllegalStateException e) {
+            reportError(e);
         }
+    }
+
+    private void validateLoadedState() {
+        int matrixSize = physics.settings.matrix.size();
+        for (Particle particle : physics.particles) {
+            if (particle.type < 0 || particle.type >= matrixSize) {
+                throw new IllegalStateException(
+                        "Particle type " + particle.type + " is out of range for matrix size " + matrixSize);
+            }
+        }
+    }
+
+    private synchronized void reportError(Exception e) {
+        this.error = e;
     }
 
     private void resetCamera(boolean fit) {
@@ -1358,46 +1304,17 @@ public class Main extends App {
         }
     }
 
-    private Color[] getColorsFromPalette(int n, Palette palette) {
-        Color[] colors = new Color[n];
-        for (int i = 0; i < n; i++) {
-            colors[i] = palette.getColor(i, n);
-        }
-        return colors;
-    }
-
     @Override
     protected void onKeyPressed(String keyName) {
-        // update key states
-        switch (keyName) {
-            case "LEFT" -> leftPressed = true;
-            case "RIGHT" -> rightPressed = true;
-            case "UP" -> upPressed = true;
-            case "DOWN" -> downPressed = true;
-            case "w" -> wPressed = true;
-            case "a" -> aPressed = true;
-            case "s" -> sPressed = true;
-            case "d" -> dPressed = true;
-            case "LEFT_SHIFT" -> leftShiftPressed = true;
-            case "RIGHT_SHIFT" -> rightShiftPressed = true;
-            case "LEFT_CONTROL" -> leftControlPressed = true;
-            case "RIGHT_CONTROL" -> rightControlPressed = true;
-            case "LEFT_ALT" -> leftAltPressed = true;
-            case "RIGHT_ALT" -> rightAltPressed = true;
-        }
+        input.onKeyPressed(keyName);
 
         // ctrl + key shortcuts
-        if (leftControlPressed | rightControlPressed) {
+        if (input.isControlPressed()) {
             switch (keyName) {
                 case "s" -> {
                     showSavesPopup.set(true);
                     requestedSaveCardsLoading.set(true);
-
-                    // Clear key states manually, because releasing [ctrl]+[s]
-                    // won't be captured once the popup is open.
-                    leftControlPressed = false;
-                    rightControlPressed = false;
-                    sPressed = false;
+                    input.clearControlAndS();
                 }
             }
             return;
@@ -1416,12 +1333,7 @@ public class Main extends App {
             case "z" -> resetCamera(false);
             case "Z" -> resetCamera(true);
             case "p" -> loop.enqueue(physics::setPositions);
-            case "c" -> loop.enqueue(() -> {
-                TypeSetter previousTypeSetter = physics.typeSetter;
-                physics.typeSetter = typeSetters.getActive();
-                physics.setTypes();
-                physics.typeSetter = previousTypeSetter;
-            });
+            case "c" -> loop.enqueue(() -> PhysicsSession.setTypesFromSelection(physics, typeSetters.getActive()));
             case "g" -> showGraphicsWindow.set(!showGraphicsWindow.get());
             case "m" -> loop.enqueue(physics::generateMatrix);
             case "b" -> loop.enqueue(() -> physics.settings.wrap ^= true);
@@ -1432,67 +1344,47 @@ public class Main extends App {
 
     @Override
     protected void onKeyReleased(String keyName) {
-        // update key states
-        switch (keyName) {
-            case "LEFT" -> leftPressed = false;
-            case "RIGHT" -> rightPressed = false;
-            case "UP" -> upPressed = false;
-            case "DOWN" -> downPressed = false;
-            case "w" -> wPressed = false;
-            case "a" -> aPressed = false;
-            case "s" -> sPressed = false;
-            case "d" -> dPressed = false;
-            case "LEFT_SHIFT" -> leftShiftPressed = false;
-            case "RIGHT_SHIFT" -> rightShiftPressed = false;
-            case "LEFT_CONTROL" -> leftControlPressed = false;
-            case "RIGHT_CONTROL" -> rightControlPressed = false;
-            case "LEFT_ALT" -> leftAltPressed = false;
-            case "RIGHT_ALT" -> rightAltPressed = false;
-        }
+        input.onKeyReleased(keyName);
     }
 
     @Override
     protected void onMousePressed(int button) {
         if (button == 2) {  // middle mouse button
-            draggingShift = true;
+            input.draggingShift = true;
         } else if (button == 0) {  // left mouse button
-            leftDraggingParticles = true;
+            input.leftDraggingParticles = true;
         } else if (button == 1) {  // right mouse button
-            rightDraggingParticles = true;
+            input.rightDraggingParticles = true;
         }
     }
 
     @Override
     protected void onMouseReleased(int button) {
         if (button == 2) {  // middle mouse button
-            draggingShift = false;
+            input.draggingShift = false;
         } else if (button == 0) {  // left mouse button
-            leftDraggingParticles = false;
+            input.leftDraggingParticles = false;
         } else if (button == 1) {  // right mouse button
-            rightDraggingParticles = false;
+            input.rightDraggingParticles = false;
         }
     }
 
     @Override
     protected void onScroll(double y) {
 
-        boolean controlPressed = leftControlPressed || rightControlPressed;
-        boolean shiftPressed = leftShiftPressed || rightShiftPressed;
-        boolean altPressed = leftAltPressed || rightAltPressed;
-
-        if (controlPressed && shiftPressed) {
+        if (input.isControlPressed() && input.isShiftPressed()) {
             // change time step
             appSettings.dt *= Math.pow(1.2, -y);
             appSettings.dt = MathUtils.clamp(appSettings.dt, 0.00f, 0.1f);
             // deactivate auto dt
             appSettings.autoDt = false;
-        } else if (shiftPressed) {
+        } else if (input.isShiftPressed()) {
             // change particle size
             appSettings.particleSize *= (float) Math.pow(1.2, -y);
-        } else if (controlPressed) {
+        } else if (input.isControlPressed()) {
             // change cursor size
             cursor.size *= Math.pow(1.2, -y);
-        } else if (altPressed) {
+        } else if (input.isAltPressed()) {
             // change rmax
             loop.enqueue(() -> physics.settings.rmax *= Math.pow(1.2, -y));
         } else {
