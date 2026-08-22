@@ -157,6 +157,8 @@ public class Main extends App {
     private MultisampledFramebuffer worldTexture;  // particles
     private MultisampledFramebuffer cursorTexture;  // cursor
 
+    private final GuiContext guiContext = new GuiContext();
+
     @Override
     protected void setup() {
         try {
@@ -249,6 +251,82 @@ public class Main extends App {
 
         // create offscreen framebuffer for cursor rendering
         cursorTexture = MultisampledFramebuffer.createLinearFiltered();
+
+        initGuiContext();
+    }
+
+    private void initGuiContext() {
+        guiContext.loop = loop;
+        guiContext.physics = physics;
+        guiContext.physicsSnapshot = physicsSnapshot;
+        guiContext.appSettings = appSettings;
+        guiContext.settings = settings;
+        guiContext.cursor = cursor;
+        guiContext.renderClock = renderClock;
+        guiContext.shaders = shaders;
+        guiContext.palettes = palettes;
+        guiContext.matrixGenerators = matrixGenerators;
+        guiContext.positionSetters = positionSetters;
+        guiContext.typeSetters = typeSetters;
+        guiContext.cursorShapes = cursorShapes;
+        guiContext.cursorActions1 = cursorActions1;
+        guiContext.cursorActions2 = cursorActions2;
+        guiContext.showGui = showGui;
+        guiContext.showGraphicsWindow = showGraphicsWindow;
+        guiContext.showControlsWindow = showControlsWindow;
+        guiContext.showAboutWindow = showAboutWindow;
+        guiContext.showSavesPopup = showSavesPopup;
+        guiContext.saveName = saveName;
+        guiContext.saveCards = saveCards;
+        guiContext.requestedSaveCardsLoading = requestedSaveCardsLoading;
+        guiContext.typeCountDiagramStepSize = typeCountDiagramStepSize;
+        guiContext.typeCountDisplayPercentage = typeCountDisplayPercentage;
+        guiContext.physicsNotReactingThreshold = physicsNotReactingThreshold;
+        guiContext.reportError = this::reportError;
+        guiContext.restartPhysics = this::restartPhysics;
+        guiContext.resetCamera = this::resetCamera;
+        guiContext.onSaveRequested = () -> {
+            selectedSaveFile = guiContext.selectedSaveFile;
+            requestedSaveImage = true;
+        };
+        guiContext.onLoadSave = file -> loop.enqueue(() -> loadState(file));
+        guiContext.onLoadSaveCards = this::loadSaveCards;
+        guiContext.closeApp = this::close;
+        guiContext.setFullscreen = this::setFullscreen;
+        guiContext.isFullscreen = this::isFullscreen;
+        guiContext.zoomIn = () -> camSizeGoal /= Math.pow(appSettings.zoomStepFactor, 2);
+        guiContext.zoomOut = () -> {
+            camSizeGoal *= Math.pow(appSettings.zoomStepFactor, 2);
+            camSizeGoal = Math.min(camSizeGoal, MAX_CAM_SIZE);
+        };
+        guiContext.appVersion = APP_VERSION;
+        guiContext.javaHome = JAVA_HOME;
+        guiContext.jvmVersion = JVM_VERSION;
+        guiContext.lwjglVersion = LWJGL_VERSION;
+        guiContext.openGlVendor = OPENGL_VENDOR;
+        guiContext.openGlRenderer = OPENGL_RENDERER;
+        guiContext.openGlVersion = OPENGL_VERSION;
+        guiContext.openGlProfile = OPENGL_PROFILE;
+        guiContext.glslVersion = GLSL_VERSION;
+    }
+
+    private void syncGuiContext() {
+        guiContext.loop = loop;
+        guiContext.physics = physics;
+        guiContext.physicsSnapshot = physicsSnapshot;
+        guiContext.settings = settings;
+        guiContext.particleCount = particleCount;
+        guiContext.preferredNumberOfThreads = preferredNumberOfThreads;
+        guiContext.cursorParticleCount = cursorParticleCount;
+        guiContext.traces = traces;
+        guiContext.scale = scale;
+        guiContext.width = width;
+        guiContext.height = height;
+        guiContext.typeCountDiagramStepSize = typeCountDiagramStepSize;
+        guiContext.typeCountDisplayPercentage = typeCountDisplayPercentage;
+        guiContext.saveCards = saveCards;
+        guiContext.requestedSaveImage = requestedSaveImage;
+        guiContext.selectedSaveFile = selectedSaveFile;
     }
 
     private void restartPhysics() {
@@ -257,6 +335,7 @@ public class Main extends App {
         physicsSnapshot = physicsSession.physicsSnapshot;
         physicsSnapshotLoadDistributor = physicsSession.physicsSnapshotLoadDistributor;
         loop = physicsSession.loop;
+        initGuiContext();
     }
 
     private void updatePhysics(double realDt) {
@@ -582,8 +661,9 @@ public class Main extends App {
     }
 
     private void buildGui() {
+        syncGuiContext();
+
         if (showGui.get()) {
-            // MAIN MENU
             ImGui.setNextWindowSize(-1, -1, ImGuiCond.FirstUseEver);
             ImGui.setNextWindowPos(0, 0, ImGuiCond.Always, 0.0f, 0.0f);
             ImGui.pushStyleVar(ImGuiStyleVar.WindowRounding, 0);
@@ -594,474 +674,30 @@ public class Main extends App {
                             | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.MenuBar)) {
                 ImGui.popStyleVar(3);
                 if (ImGui.beginMenuBar()) {
-                    buildMainMenu();
+                    GuiMainMenuBar.draw(guiContext);
                     ImGui.endMenuBar();
                 }
             }
             ImGui.end();
 
-            // PARTICLES
-            ImGui.setNextWindowSize(-1, -1, ImGuiCond.FirstUseEver);
-            ImGui.setNextWindowPos(width, 0, ImGuiCond.Always, 1.0f, 0.0f);
-            ImGui.getStyle().setWindowMenuButtonPosition(ImGuiDir.Right);
-            if (ImGui.begin("Particles",
-                    ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoNavFocus | ImGuiWindowFlags.NoMove)) {
-                ImGui.pushItemWidth(200);
-
-                // N
-                ImInt particleCountInput = new ImInt(particleCount);
-                if (ImGui.inputInt("Particle count", particleCountInput, 1000, 1000, ImGuiInputTextFlags.EnterReturnsTrue)) {
-                    final int newCount = Math.max(0, particleCountInput.get());
-                    loop.enqueue(() -> physics.setParticleCount(newCount));
-                }
-
-                // POSITION SETTERS
-                if (ImGuiUtils.renderCombo("##positions", positionSetters)) {
-                    final PositionSetter nextPositionSetter = positionSetters.getActive();
-                    loop.enqueue(() -> physics.positionSetter = nextPositionSetter);
-                }
-                ImGui.sameLine();
-                if (ImGui.button("Positions")) {
-                    loop.enqueue(physics::setPositions);
-                }
-                ImGuiUtils.helpMarker("[p]");
-
-                ImGuiUtils.separator();
-
-                // MATRIX GENERATORS
-                if (ImGuiUtils.renderCombo("##matrix", matrixGenerators)) {
-                    final MatrixGenerator nextMatrixGenerator = matrixGenerators.getActive();
-                    loop.enqueue(() -> physics.matrixGenerator = nextMatrixGenerator);
-                }
-                ImGui.sameLine();
-                if (ImGui.button("Matrix")) {
-                    loop.enqueue(physics::generateMatrix);
-                }
-                ImGuiUtils.helpMarker("[m]");
-
-                // MATRIX
-                ImGuiMatrix.draw(200 * scale, 200 * scale,
-                        palettes.getActive(),
-                        appSettings.matrixGuiStepSize,
-                        settings.matrix,
-                        (i, j, newValue) -> loop.enqueue(() -> physics.settings.matrix.set(i, j, newValue))
-                );
-                if (ImGui.button("Copy")) {
-                    ImGui.setClipboardText(MatrixParser.matrixToString(settings.matrix));
-                }
-                ImGui.sameLine();
-                if (ImGui.button("Paste")) {
-                    Matrix parsedMatrix = MatrixParser.parseMatrix(ImGui.getClipboardText());
-                    if (parsedMatrix != null) {
-                        loop.enqueue(() -> {
-                            physics.setMatrixSize(parsedMatrix.size());
-                            physics.settings.matrix = parsedMatrix;
-                        });
-                    }
-                }
-                ImGuiUtils.helpMarker("Save / load matrix via the clipboard.");
-                if (ImGui.treeNode("Settings##matrix")) {
-                    ImFloat inputValue = new ImFloat((float) appSettings.matrixGuiStepSize);
-                    if (ImGui.inputFloat("Step Size##Matrix", inputValue, 0.05f, 0.05f, "%.2f")) {
-                        appSettings.matrixGuiStepSize = MathUtils.clamp(inputValue.get(), 0.05f, 1.0f);
-                    }
-                    ImGui.treePop();
-                }
-
-                ImGuiUtils.separator();
-
-                // TYPE SETTERS
-                ImGuiUtils.renderCombo("##colors", typeSetters);
-                ImGui.sameLine();
-                if (ImGui.button("Colors")) {
-                    loop.enqueue(() -> PhysicsSession.setTypesFromSelection(physics, typeSetters.getActive()));
-                }
-                ImGuiUtils.helpMarker("[c] Use this to set colors of particles without changing their position.");
-
-                // NTYPES
-                ImInt matrixSizeInput = new ImInt(settings.matrix.size());
-                if (ImGui.inputInt("Colors##input", matrixSizeInput, 1, 1, ImGuiInputTextFlags.EnterReturnsTrue)) {
-                    final int newSize = Math.max(1, Math.min(matrixSizeInput.get(), 256));
-                    loop.enqueue(() -> physics.setMatrixSize(newSize));
-                }
-
-                ImGuiBarGraph.draw(200, 100,
-                        palettes.getActive(),
-                        typeCountDiagramStepSize,
-                        physicsSnapshot.typeCount,
-                        (type, newValue) -> {
-                            final int[] newTypeCount = Arrays.copyOf(physicsSnapshot.typeCount, physicsSnapshot.typeCount.length);
-                            newTypeCount[type] = newValue;
-                            loop.enqueue(() -> physics.setTypeCount(newTypeCount));
-                        },
-                        typeCountDisplayPercentage
-                );
-                if (ImGui.button("Equalize")) {
-                    loop.enqueue(() -> physics.setTypeCountEqual());
-                }
-                if (ImGui.treeNode("Settings##colorbars")) {
-                    {
-                        ImInt inputValue = new ImInt(typeCountDiagramStepSize);
-                        if (ImGui.inputInt("Step Size##ColorCount", inputValue, 10)) {
-                            typeCountDiagramStepSize = Math.max(0, inputValue.get());
-                        }
-                    }
-
-                    {
-                        ImInt selected = new ImInt(typeCountDisplayPercentage ? 1 : 0);
-                        ImGui.radioButton("Absolute", selected, 0);
-                        ImGui.sameLine();
-                        ImGui.radioButton("Percentage", selected, 1);
-                        typeCountDisplayPercentage = selected.get() == 1;
-                    }
-                    ImGui.treePop();
-                }
-
-                ImGui.popItemWidth();
-            }
-            ImGui.end();
-
-            // PHYSICS
-            ImGui.setNextWindowSize(-1, -1, ImGuiCond.FirstUseEver);
-            ImGui.setNextWindowPos(width, height, ImGuiCond.Always, 1.0f, 1.0f);
-            ImGui.getStyle().setWindowMenuButtonPosition(ImGuiDir.Right);
-            if (ImGui.begin("Physics",
-                    ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoNavFocus | ImGuiWindowFlags.NoMove)) {
-                ImGui.pushItemWidth(200);
-
-                if (ImGui.button(loop.pause ? "Play" : "Pause", 80, 0)) {
-                    loop.pause ^= true;
-                }
-                ImGuiUtils.helpMarker("[SPACE] " +
-                        "The physics simulation runs independently from the graphics in the background.");
-
-                ImGui.sameLine();
-                if (loop.getAvgFramerate() < 100000) {
-                    ImGui.text(String.format("FPS: %5.0f", loop.getAvgFramerate()));
-                } else {
-                    ImGui.text("");
-                }
-
-                // SliderFloat Block
-                ImGuiUtils.numberInput("rmax",
-                        0.005f, 1f,
-                        (float) settings.rmax,
-                        "%.3f",
-                        value -> loop.enqueue(() -> physics.settings.rmax = value));
-                ImGuiUtils.helpMarker("The distance at which particles interact.");
-
-                ImGuiUtils.numberInput("Friction Coefficient",
-                        0f, 1f,
-                        (float) settings.friction,
-                        "%.3f",
-                        value -> loop.enqueue(() -> physics.settings.friction = value),
-                        false);
-                ImGuiUtils.helpMarker("The velocity of all particles is multiplied with this value" +
-                        " in each update step to simulate friction (assuming 60 fps).");
-
-                ImGuiUtils.numberInput("Force Scaling",
-                        0f, 100f,
-                        (float) settings.force,
-                        "%.1f",
-                        value -> loop.enqueue(() -> physics.settings.force = value));
-                ImGuiUtils.helpMarker("Scales the forces between all particles with a constant factor.");
-
-                ImGuiUtils.separator();
-
-                if (ImGui.checkbox("Periodic Boundaries", settings.wrap)) {
-                    final boolean newWrap = !settings.wrap;
-                    loop.enqueue(() -> physics.settings.wrap = newWrap);
-                }
-                ImGuiUtils.helpMarker("[b] Determines if the space wraps around at the borders or not.");
-
-                if (appSettings.autoDt) ImGui.beginDisabled();
-                ImGuiUtils.numberInput(
-                        "Time Step",
-                        0, 100,
-                        (float) appSettings.dt * 1000f,
-                        "%.2f ms",
-                        value -> appSettings.dt = Math.max(0, value / 1000));
-                if (appSettings.autoDt) ImGui.endDisabled();
-                ImGui.sameLine();
-                if (ImGui.checkbox("Auto", appSettings.autoDt)) appSettings.autoDt ^= true;
-                ImGuiUtils.helpMarker("[ctrl+shift+scroll] The time step of the physics computation." +
-                        "\nIf 'Auto' is ticked, the time step will be chosen automatically based on the real passed time.");
-
-                ImInt threadNumberInput = new ImInt(preferredNumberOfThreads);
-                if (ImGui.inputInt("Threads", threadNumberInput, 1, 1, ImGuiInputTextFlags.EnterReturnsTrue)) {
-                    final int newThreadNumber = Math.max(1, threadNumberInput.get());
-                    loop.enqueue(() -> physics.preferredNumberOfThreads = newThreadNumber);
-                }
-                ImGuiUtils.helpMarker("The number of threads used by your processor for the physics computation." +
-                        "\n(If you don't know what this means, just ignore it.)");
-
-                ImGui.popItemWidth();
-            }
-            ImGui.end();
-
-            // CURSOR
-            ImGui.setNextWindowSize(290, 250, ImGuiCond.FirstUseEver);
-            ImGui.setNextWindowPos(0, height, ImGuiCond.Always, 0.0f, 1.0f);
-            ImGui.getStyle().setWindowMenuButtonPosition(ImGuiDir.Left);
-            if (ImGui.begin("Cursor",
-                    ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoNavFocus | ImGuiWindowFlags.NoMove)) {
-                ImGui.pushItemWidth(200);
-
-                ImGui.text("Hovered Particles: " + cursorParticleCount);
-                if (ImGui.checkbox("Show", appSettings.showCursor)) {
-                    appSettings.showCursor ^= true;
-                }
-                // cursor size slider
-                ImGuiUtils.numberInput("Size",
-                        0.001f, 1f,
-                        (float) cursor.size,
-                        "%.3f",
-                        value -> cursor.size = value);
-                ImGuiUtils.helpMarker("[ctrl+scroll]");
-
-                ImGuiUtils.renderCombo("Shape##cursor", cursorShapes);
-                cursor.shape = cursorShapes.getActive();
-
-                ImGuiUtils.separator();
-
-                if (ImGui.beginTable("Cursor Action Table", 2, ImGuiTableFlags.None)) {
-                    // Set up column headers
-                    ImGui.tableSetupColumn("", ImGuiTableColumnFlags.WidthFixed, 100);
-                    ImGui.tableSetupColumn("", ImGuiTableColumnFlags.WidthFixed, 100);
-
-                    ImGui.tableNextRow();
-                    ImGui.tableSetColumnIndex(0);
-                    ImGui.text("Left");
-                    ImGui.tableSetColumnIndex(1);
-                    ImGui.text("Right");
-
-                    ImGui.tableNextRow();
-                    ImGui.tableSetColumnIndex(0);
-                    ImGui.pushItemWidth(100);
-                    ImGuiUtils.renderCombo("##cursoraction1", cursorActions1);
-                    ImGui.popItemWidth();
-                    ImGui.tableSetColumnIndex(1);
-                    ImGui.pushItemWidth(100);
-                    ImGuiUtils.renderCombo("##cursoraction2", cursorActions2);
-                    ImGui.popItemWidth();
-
-                    ImGui.tableNextRow();
-                    ImGui.endTable();
-                }
-
-                ImGui.indent();
-                if (cursorActions1.getActive() == CursorAction.BRUSH || cursorActions2.getActive() == CursorAction.BRUSH) {
-                    ImInt inputValue = new ImInt(appSettings.brushPower);
-                    ImGui.pushItemWidth(100);
-                    if (ImGui.inputInt("Brush Power", inputValue, 10, ImGuiInputTextFlags.EnterReturnsTrue)) {
-                        appSettings.brushPower = Math.max(0, inputValue.get());
-                    }
-                    ImGui.popItemWidth();
-                    ImGuiUtils.helpMarker("Number of particles added per frame.");
-                }
-                ImGui.unindent();
-
-                ImGui.popItemWidth();
-            }
-            ImGui.end();
+            GuiParticlesPanel.draw(guiContext);
+            GuiPhysicsPanel.draw(guiContext);
+            GuiCursorPanel.draw(guiContext);
         }
 
-        // GRAPHICS
-        if (showGraphicsWindow.get()) {
-            ImGui.setNextWindowSize(400, 300);
-            ImGui.setNextWindowPos(width / 2f, height / 2f, ImGuiCond.FirstUseEver, 0.5f, 0.5f);
-            if (ImGui.begin("Graphics", showGraphicsWindow,
-                    ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoNavFocus | ImGuiWindowFlags.NoCollapse)) {
-                ImGui.pushItemWidth(200);
-                ImGui.text(String.format("Graphics FPS: %.0f", renderClock.getAvgFramerate()));
-
-                // SHADERS
-                ImGuiUtils.renderCombo("Shader", shaders);
-                ImGuiUtils.helpMarker("Use this to set how the particles are displayed");
-
-                // PALETTES
-                ImGuiUtils.renderCombo("Palette", palettes);
-                ImGuiUtils.helpMarker("Color of particles");
-
-                ImGui.text("Particle Size:");
-                ImGuiUtils.helpMarker("[shift+scroll]" +
-                        "\nHow large the particles are displayed relative to rmax.");
-                float[] particleSizeSliderValue = new float[]{appSettings.particleSize};
-                if (ImGui.sliderFloat("##particle size", particleSizeSliderValue, 0.001f, 1f)) {
-                    appSettings.particleSize = particleSizeSliderValue[0];
-                }
-                ImGui.sameLine();
-                if (ImGui.checkbox("Zoom-Independent", appSettings.keepParticleSizeIndependentOfZoom)) {
-                    appSettings.keepParticleSizeIndependentOfZoom ^= true;
-                }
-
-                if (ImGui.checkbox("Traces [t]", traces)) {
-                    traces ^= true;
-                }
-
-                if (ImGui.treeNode("Camera Settings")) {
-                    {
-                        float[] inputValue = new float[]{(float) appSettings.camMovementSpeed};
-                        if (ImGui.sliderFloat("Cam Speed", inputValue, 0.0f, 2.0f, "%0.2f")) {
-                            appSettings.camMovementSpeed = inputValue[0];
-                        }
-                    }
-
-                    {
-                        float[] inputValue = new float[]{(float) (1.0 - appSettings.zoomSmoothness)};
-                        if (ImGui.sliderFloat("Cam Smoothing", inputValue, 0.0f, 1.0f, "%0.2f")) {
-                            appSettings.zoomSmoothness = 1.0 - inputValue[0];
-                            appSettings.shiftSmoothness = 1.0 - inputValue[0];
-                        }
-                    }
-
-                    {
-                        float[] inputValue = new float[]{(float) (appSettings.zoomStepFactor - 1) * 100};
-                        if (ImGui.sliderFloat("Zoom Step", inputValue, 0.0f, 100.0f, "%.1f%%", ImGuiSliderFlags.Logarithmic)) {
-                            appSettings.zoomStepFactor = 1 + inputValue[0] * 0.01;
-                        }
-                    }
-
-                    ImGui.treePop();
-                }
-
-                ImGui.popItemWidth();
-            }
-            ImGui.end();
-        }
-
-        // PHYSICS NOT REACTING
-        long physicsNotReactingSince = System.currentTimeMillis() - physicsSnapshot.snapshotTime;
-        boolean physicsNotReacting = physicsNotReactingSince > physicsNotReactingThreshold;
-        if (physicsNotReacting) ImGui.openPopup("Not reacting");
-        if (ImGui.beginPopupModal("Not reacting")) {
-            if (!physicsNotReacting) {
-                ImGui.closeCurrentPopup();
-            }
-
-            ImGui.text("Physics didn't react since %4.0f seconds.".formatted(physicsNotReactingSince / 1000.0));
-
-            if (ImGui.button("Reset Physics")) {
-                restartPhysics();
-            }
-
-            ImGui.endPopup();
-        }
-
-        if (showControlsWindow.get()) {
-            ImGui.setNextWindowPos(width / 2f, height / 2f, ImGuiCond.FirstUseEver, 0.5f, 0.5f);
-            if (ImGui.begin("Controls", showControlsWindow, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoResize)) {
-                ImGui.text("""
-                        [+], [=]: zoom in
-                        [-]: zoom out
-                        [z]: reset zoom
-                        [Z]: reset zoom (fit window)
-                        [ESCAPE]: hide / show GUI
-                        [g]: show / hide graphics settings
-                        [SPACE]: pause physics
-                        [p]: set positions
-                        [c]: set colors
-                        [m]: set matrix
-                        [b]: toggle boundaries (clamped / periodic)
-                        [t]: toggle traces
-                        [F11], [f]: toggle full screen
-                        [ALT]+[F4], [q]: quit
-                        """);
-            }
-            ImGui.end();
-        }
-
-        if (showAboutWindow.get()) {
-            ImGui.setNextWindowPos(width / 2f, height / 2f, ImGuiCond.FirstUseEver, 0.5f, 0.5f);
-            if (ImGui.begin("About", showAboutWindow, ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse)) {
-                ImGui.text("Particle Life App " + APP_VERSION);
-                ImGui.text("By Tom Mohr.");
-                ImGui.text("GPL-3.0 License.");
-                ImGui.dummy(0, 10);
-                if (ImGuiUtils.link("particle-life.com", "https://particle-life.com")) {
-                    setFullscreen(false);
-                }
-                ImGui.dummy(0, 10);
-                ImGui.text("Java Home: " + JAVA_HOME);
-                ImGui.text("JVM Version: " + JVM_VERSION);
-                ImGui.text("LWJGL Version: " + LWJGL_VERSION);
-                ImGui.text("OpenGL Vendor: " + OPENGL_VENDOR);
-                ImGui.text("OpenGL Renderer: " + OPENGL_RENDERER);
-                ImGui.text("OpenGL Version: " + OPENGL_VERSION);
-                ImGui.text("OpenGL Profile: " + OPENGL_PROFILE);
-                ImGui.text("GLSL Version: " + GLSL_VERSION);
-            }
-            ImGui.end();
-        }
-
-        if (showSavesPopup.get()) ImGui.openPopup("Saves");
-        ImGui.setNextWindowSize(480, -1, ImGuiCond.Always);
-        ImGui.setNextWindowPos(width / 2f, height / 2f, ImGuiCond.Appearing, 0.5f, 0.5f);
-        ImGui.setNextWindowBgAlpha(1f);
-        if (ImGui.beginPopupModal("Saves", showSavesPopup, ImGuiWindowFlags.NoResize)) {
-
-            ImGui.textDisabled("""
-                    Left-click to load, middle-click to delete.
-                    The most recent saves are at the top.
-                    Each save corresponds to a .zip file in the 'saves' directory.
-                    """
-            );
-            ImGuiUtils.separator();
-
-            float cardViewWidth = ImGui.getWindowContentRegionMaxX() - 2 * ImGui.getStyle().getFramePaddingX();
-            ImGui.beginChild("save cards", cardViewWidth, 250);
-            ImGuiCardView.Card[] filteredCards = Arrays
-                    .stream(saveCards)
-                    .filter(card -> card.name.contains(saveName.get()))
-                    .sorted(Comparator.comparing(card -> -card.file.lastModified()))  // sort by creation time (descending)
-                    .toArray(ImGuiCardView.Card[]::new);
-            ImGuiCardView.draw(
-                    cardViewWidth,
-                    100,
-                    8,
-                    filteredCards,
-                    card -> {
-                        loop.enqueue(() -> loadState(card.file));
-                        showSavesPopup.set(false);
-                    },
-                    card -> {
-                        try {
-                            Files.deleteIfExists(card.file.toPath());
-                        } catch (IOException e) {
-                            reportError(e);
-                        }
-                        requestedSaveCardsLoading.set(true);
-                    }
-            );
-            ImGui.endChild();
-
-            if (!ImGui.isAnyItemActive() && !ImGui.isMouseClicked(0)) {
-                // see https://github.com/ocornut/imgui/issues/455#issuecomment-167440172
-                ImGui.setKeyboardFocusHere(0);
-            }
-            boolean shouldSave = ImGui.inputTextWithHint("##save name", "Save Name", saveName, ImGuiInputTextFlags.EnterReturnsTrue);
-            ImGuiUtils.helpMarker("Enter a name and press Enter to save the current state.");
-            if (shouldSave) {
-                String title = saveName.get();
-                saveName.clear();
-                if (!title.isBlank()) {
-                    selectedSaveFile = new File("saves/" + title + ".zip");
-                    requestedSaveImage = true;
-                }
-            }
-            ImGui.endPopup();
-        }
+        GuiGraphicsPanel.draw(guiContext);
+        GuiPhysicsNotReactingDialog.draw(guiContext);
+        GuiControlsDialog.draw(guiContext);
+        GuiAboutDialog.draw(guiContext);
+        GuiSavesDialog.draw(guiContext);
 
         if (requestedSaveImage) {
-
             saveImage = renderParticlesToImage();
-
             final File selectedFile = selectedSaveFile;
             loop.enqueue(() -> {
                 selectedFile.getParentFile().mkdirs();
                 saveState(selectedFile);
             });
-
             requestedSaveImage = false;
         }
 
@@ -1069,6 +705,7 @@ public class Main extends App {
             loadSaveCards();
         }
     }
+
 
     private int[] renderParticlesToImage() {
 
@@ -1117,62 +754,6 @@ public class Main extends App {
         return pixels;
     }
 
-    private void buildMainMenu() {
-        if (ImGui.beginMenu("Menu")) {
-
-            if (ImGui.menuItem("Saves##menu", "Ctrl+s")) {
-                showSavesPopup.set(true);
-                requestedSaveCardsLoading.set(true);
-            }
-
-            if (ImGui.menuItem("Controls..")) {
-                showControlsWindow.set(true);
-            }
-
-            if (ImGui.menuItem("About..")) {
-                showAboutWindow.set(true);
-            }
-
-            if (ImGui.menuItem("Quit", "Alt+F4, q")) {
-                close();
-            }
-
-            ImGui.endMenu();
-        }
-
-        if (ImGui.beginMenu("View")) {
-
-            if (isFullscreen()) {
-                if (ImGui.menuItem("Exit Fullscreen", "F11, f")) {
-                    setFullscreen(false);
-                }
-            } else {
-                if (ImGui.menuItem("Fullscreen", "F11, f")) {
-                    setFullscreen(true);
-                }
-            }
-
-            if (ImGui.menuItem("Hide GUI", "Esc")) {
-                showGui.set(false);
-            }
-
-            if (ImGui.beginMenu("Zoom")) {
-                if (ImGui.menuItem("100%", "z")) {
-                    resetCamera(false);
-                }
-                if (ImGui.menuItem("Fit", "Z")) {
-                    resetCamera(true);
-                }
-                ImGui.endMenu();
-            }
-
-            if (ImGui.menuItem("Graphics..", "g")) {
-                showGraphicsWindow.set(true);
-            }
-
-            ImGui.endMenu();
-        }
-    }
 
     private void loadSaveCards() {
         List<Path> saves;
@@ -1306,40 +887,7 @@ public class Main extends App {
 
     @Override
     protected void onKeyPressed(String keyName) {
-        input.onKeyPressed(keyName);
-
-        // ctrl + key shortcuts
-        if (input.isControlPressed()) {
-            switch (keyName) {
-                case "s" -> {
-                    showSavesPopup.set(true);
-                    requestedSaveCardsLoading.set(true);
-                    input.clearControlAndS();
-                }
-            }
-            return;
-        }
-
-        // simple key shortcuts
-        switch (keyName) {
-            case "ESCAPE" -> showGui.set(!showGui.get());
-            case "f" -> setFullscreen(!isFullscreen());
-            case "t" -> traces ^= true;
-            case "+", "=" -> camSizeGoal /= Math.pow(appSettings.zoomStepFactor, 2);// more steps than when scrolling
-            case "-" -> {
-                camSizeGoal *= Math.pow(appSettings.zoomStepFactor, 2);
-                camSizeGoal = Math.min(camSizeGoal, MAX_CAM_SIZE);
-            }
-            case "z" -> resetCamera(false);
-            case "Z" -> resetCamera(true);
-            case "p" -> loop.enqueue(physics::setPositions);
-            case "c" -> loop.enqueue(() -> PhysicsSession.setTypesFromSelection(physics, typeSetters.getActive()));
-            case "g" -> showGraphicsWindow.set(!showGraphicsWindow.get());
-            case "m" -> loop.enqueue(physics::generateMatrix);
-            case "b" -> loop.enqueue(() -> physics.settings.wrap ^= true);
-            case " " -> loop.pause ^= true;
-            case "q" -> close();
-        }
+        InputShortcuts.handleKey(keyName, guiContext, input);
     }
 
     @Override
