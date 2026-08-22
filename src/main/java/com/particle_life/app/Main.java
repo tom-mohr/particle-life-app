@@ -3,8 +3,6 @@ package com.particle_life.app;
 import com.particle_life.app.color.Palette;
 import com.particle_life.app.color.PalettesProvider;
 import com.particle_life.app.cursors.*;
-import com.particle_life.app.io.MatrixIO;
-import com.particle_life.app.io.ParticlesIO;
 import com.particle_life.app.io.ResourceAccess;
 import com.particle_life.app.selection.SelectionManager;
 import com.particle_life.app.shaders.CursorShader;
@@ -16,29 +14,15 @@ import imgui.ImGui;
 import imgui.flag.*;
 import imgui.gl3.ImGuiImplGl3;
 import imgui.type.ImBoolean;
-import imgui.type.ImFloat;
-import imgui.type.ImInt;
 import imgui.type.ImString;
 import org.joml.Vector2d;
-import org.joml.Vector3d;
 import org.lwjgl.Version;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
-import java.util.zip.ZipOutputStream;
 
 import static org.lwjgl.opengl.GL11C.*;
 import static org.lwjgl.opengl.GL13C.GL_MULTISAMPLE;
@@ -143,7 +127,6 @@ public class Main extends App {
     private final ImString saveName = new ImString();
     private ImGuiCardView.Card[] saveCards = new ImGuiCardView.Card[0];
     private final AtomicBoolean requestedSaveCardsLoading = new AtomicBoolean(true);
-    private int[] saveImage = null;
     private boolean requestedSaveImage = false;
     private File selectedSaveFile = null;
 
@@ -152,6 +135,7 @@ public class Main extends App {
     private MultisampledFramebuffer cursorTexture;  // cursor
 
     private final GuiContext guiContext = new GuiContext();
+    private SaveLoadService saveLoadService;
 
     @Override
     protected void setup() {
@@ -232,6 +216,7 @@ public class Main extends App {
         physicsSnapshotLoadDistributor = physicsSession.physicsSnapshotLoadDistributor;
         physicsSession.start(this::updatePhysics);
         loop = physicsSession.loop;
+        saveLoadService = new SaveLoadService(physics, this::reportError, requestedSaveCardsLoading);
 
         // set default selection for palette
         if (palettes.hasName(appSettings.palette)) {
@@ -283,8 +268,8 @@ public class Main extends App {
             selectedSaveFile = guiContext.selectedSaveFile;
             requestedSaveImage = true;
         };
-        guiContext.onLoadSave = file -> loop.enqueue(() -> loadState(file));
-        guiContext.onLoadSaveCards = this::loadSaveCards;
+        guiContext.onLoadSave = file -> loop.enqueue(() -> saveLoadService.loadState(file));
+        guiContext.onLoadSaveCards = () -> saveCards = saveLoadService.loadSaveCards();
         guiContext.closeApp = this::close;
         guiContext.setFullscreen = this::setFullscreen;
         guiContext.isFullscreen = this::isFullscreen;
@@ -329,6 +314,7 @@ public class Main extends App {
         physicsSnapshot = physicsSession.physicsSnapshot;
         physicsSnapshotLoadDistributor = physicsSession.physicsSnapshotLoadDistributor;
         loop = physicsSession.loop;
+        saveLoadService = new SaveLoadService(physics, this::reportError, requestedSaveCardsLoading);
         initGuiContext();
     }
 
@@ -439,86 +425,19 @@ public class Main extends App {
                     settings.wrap);
         }
 
-        // cursor actions
-        if (input.leftDraggingParticles || input.rightDraggingParticles) {
+        CursorInteractionHandler.handleDragging(
+                input, cursor, screen, cursorActions1, cursorActions2,
+                appSettings, loop, physics, pmouseX, pmouseY, mouseX, mouseY);
 
-            // need to copy for async access in loop.enqueue()
-            final Cursor cursorCopy;
-            try {
-                cursorCopy = cursor.copy();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-
-            // execute cursor action
-            SelectionManager<CursorAction> cursorActions = input.leftDraggingParticles ? cursorActions1 : cursorActions2;
-            switch (cursorActions.getActive()) {
-                case MOVE -> {
-                    final Vector3d dragStartWorld = screen.screenToWorld(pmouseX, pmouseY);  // where the dragging started
-                    final Vector3d dragStopWorld = screen.screenToWorld(mouseX, mouseY);  // where the dragging ended
-                    final Vector3d delta = dragStopWorld.sub(dragStartWorld);  // dragged distance
-                    cursorCopy.position.set(dragStartWorld.x, dragStartWorld.y, 0.0);  // set cursor copy to start of dragging
-                    loop.enqueue(() -> {
-                        for (Particle p : cursorCopy.getSelection(physics.particles, physics.settings.wrap)) {
-                            p.position.add(delta.x, delta.y, 0);
-                            physics.ensurePosition(p.position);  // wrap or clamp
-                        }
-                    });
-                }
-                case BRUSH -> {
-                    final int addCount = appSettings.brushPower;
-                    loop.enqueue(() -> {
-                        int prevLength = physics.particles.length;
-                        physics.particles = Arrays.copyOf(physics.particles, prevLength + addCount);
-                        for (int i = 0; i < addCount; i++) {
-                            Particle particle = new Particle();
-                            particle.position.set(cursorCopy.sampleRandomPoint());
-                            physics.ensurePosition(particle.position);
-                            particle.type = physics.typeSetter.getType(
-                                    particle.position,
-                                    particle.velocity,
-                                    particle.type,
-                                    physics.settings.matrix.size()
-                            );
-                            physics.particles[prevLength + i] = particle;
-                        }
-                    });
-                }
-                case DELETE -> {
-                    loop.enqueue(() -> {
-                        Particle[] newParticles = new Particle[physics.particles.length];
-                        int j = 0;
-                        for (Particle particle : physics.particles) {
-                            if (!cursorCopy.isInside(particle, physics.settings.wrap)) {
-                                newParticles[j] = particle;
-                                j++;
-                            }
-                        }
-                        physics.particles = Arrays.copyOf(newParticles, j);  // cut to correct length
-                    });
-                }
-            }
+        PhysicsSession.SnapshotUpdate snapshotUpdate = physicsSession.consumeSnapshotIfAvailable(
+                particleRenderer, shaders.getActive());
+        if (snapshotUpdate != null) {
+            settings = snapshotUpdate.settings();
+            particleCount = snapshotUpdate.particleCount();
+            preferredNumberOfThreads = snapshotUpdate.preferredNumberOfThreads();
         }
 
-        if (newSnapshotAvailable.get()) {
-
-            // get local copy of snapshot
-
-            particleRenderer.bufferParticleData(shaders.getActive(),
-                    physicsSnapshot.positions,
-                    physicsSnapshot.velocities,
-                    physicsSnapshot.types);
-            settings = physicsSnapshot.settings.deepCopy();
-            particleCount = physicsSnapshot.particleCount;
-            preferredNumberOfThreads = physics.preferredNumberOfThreads;
-
-            newSnapshotAvailable.set(false);
-        }
-
-        loop.doOnce(() -> {
-            physicsSnapshot.take(physics, physicsSnapshotLoadDistributor);
-            newSnapshotAvailable.set(true);
-        });
+        physicsSession.scheduleSnapshotCapture();
 
         if (mouseX == 0 && mouseY == 0 && !showGui.get()) {
             showGui.set(true);
@@ -587,17 +506,17 @@ public class Main extends App {
         GuiSavesDialog.draw(guiContext);
 
         if (requestedSaveImage) {
-            saveImage = renderParticlesToImage();
+            final int[] image = renderParticlesToImage();
             final File selectedFile = selectedSaveFile;
             loop.enqueue(() -> {
                 selectedFile.getParentFile().mkdirs();
-                saveState(selectedFile);
+                saveLoadService.saveState(selectedFile, image);
             });
             requestedSaveImage = false;
         }
 
         if (requestedSaveCardsLoading.getAndSet(false)) {
-            loadSaveCards();
+            saveCards = saveLoadService.loadSaveCards();
         }
     }
 
@@ -614,120 +533,6 @@ public class Main extends App {
     }
 
 
-    private void loadSaveCards() {
-        List<Path> saves;
-        try {
-            saves = ResourceAccess.listFiles("saves");
-        } catch (IOException e) {
-            this.error = e;
-            return;
-        }
-        saveCards = ImGuiCardView.loadCards(saves);
-    }
-
-    private void saveState(File file) {
-        try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
-            try (ZipOutputStream zip = new ZipOutputStream(fileOutputStream)) {
-
-                // PARTICLES
-                zip.putNextEntry(new ZipEntry("particles.tsv"));
-                ParticlesIO.saveParticles(physics.particles, zip);
-                zip.closeEntry();
-
-                // PHYSICS SETTINGS
-                zip.putNextEntry(new ZipEntry("physics.toml"));
-                PhysicsSettingsToml.fromPhysicsSettings(physics.settings).save(zip);
-                zip.closeEntry();
-
-                // MATRIX
-                zip.putNextEntry(new ZipEntry("matrix.tsv"));
-                MatrixIO.saveMatrix(physics.settings.matrix, zip);
-                zip.closeEntry();
-
-                // IMAGE
-                if (saveImage != null) {
-                    zip.putNextEntry(new ZipEntry("img.png"));
-                    // convert to png format
-                    BufferedImage bufferedImage = new BufferedImage(
-                            SaveThumbnailRenderer.SAVE_IMAGE_SIZE, SaveThumbnailRenderer.SAVE_IMAGE_SIZE,
-                            BufferedImage.TYPE_INT_ARGB
-                    );
-                    bufferedImage.setRGB(
-                            0, 0, SaveThumbnailRenderer.SAVE_IMAGE_SIZE, SaveThumbnailRenderer.SAVE_IMAGE_SIZE,
-                            saveImage, 0, SaveThumbnailRenderer.SAVE_IMAGE_SIZE
-                    );
-                    ImageIO.write(bufferedImage, "png", zip);
-                    zip.closeEntry();
-                    saveImage = null;
-                }
-            }
-        } catch (IOException e) {
-            reportError(e);
-        }
-        requestedSaveCardsLoading.set(true);
-    }
-
-    /**
-     * Load the state from a ZIP file.
-     * The zip file can contain the following files:
-     * <ul>
-     *     <li>particles.tsv</li>
-     *     <li>physics.toml</li>
-     *     <li>matrix.tsv</li>
-     * </ul>
-     * If a file is missing, the existing state will be kept for that part.
-     * Currently, this might lead to an error, e.g. if the matrix size
-     * doesn't match the particle types.
-     *
-     * @param file a zip file
-     */
-    private void loadState(File file) {
-        try (ZipInputStream zip = new ZipInputStream(new FileInputStream(file))) {
-            ZipEntry entry;
-            while ((entry = zip.getNextEntry()) != null) {
-                switch (entry.getName()) {
-                    case "particles.tsv": {
-                        physics.particles = ParticlesIO.loadParticles(zip);
-                        break;
-                    }
-                    case "physics.toml": {
-                        PhysicsSettingsToml toml = new PhysicsSettingsToml();
-                        toml.load(zip);
-                        toml.toPhysicsSettings(physics.settings);  // copy values
-                        break;
-                    }
-                    case "matrix.tsv": {
-                        physics.settings.matrix = MatrixIO.loadMatrix(zip);
-                        physics.ensureTypes();  // in case the matrix size changed
-                        break;
-                    }
-                    case "img.png": {
-                        // ignore
-                        break;
-                    }
-                    default: {
-                        System.err.println("Unknown file in ZIP: " + entry.getName());
-                        break;
-                    }
-                }
-                zip.closeEntry();
-            }
-            physics.ensureTypes();
-            validateLoadedState();
-        } catch (IOException | IllegalStateException e) {
-            reportError(e);
-        }
-    }
-
-    private void validateLoadedState() {
-        int matrixSize = physics.settings.matrix.size();
-        for (Particle particle : physics.particles) {
-            if (particle.type < 0 || particle.type >= matrixSize) {
-                throw new IllegalStateException(
-                        "Particle type " + particle.type + " is out of range for matrix size " + matrixSize);
-            }
-        }
-    }
 
     private synchronized void reportError(Exception e) {
         this.error = e;
